@@ -1,6 +1,9 @@
 // Brevo email sender — SERVER-SIDE ONLY.
 // Never import this in client components.
 // Sends transactional emails (OTP codes, signing invitations, etc.)
+// Reads Brevo config from DB (SuperAdmin-managed) with env var fallback.
+
+import { getBrevoConfig } from "./supabase-server"
 
 interface BrevoEmailParams {
   to: string
@@ -12,15 +15,17 @@ interface BrevoEmailParams {
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
 export async function sendEmailViaBrevo(params: BrevoEmailParams): Promise<{ success: boolean; error?: string }> {
-  const apiKey = process.env.BREVO_API_KEY
-  const senderEmail = process.env.BREVO_SENDER_EMAIL
-  const senderName = process.env.BREVO_SENDER_NAME || "VaultSign"
+  // Get config from DB (cached) with env var fallback
+  const config = await getBrevoConfig()
+  const apiKey = config.apiKey
+  const senderEmail = config.senderEmail
+  const senderName = config.senderName
 
-  // If Brevo isn't configured, log the email (for dev) and return success
+  // If Brevo isn't configured anywhere, log the email (for dev) and return success
   // so the app doesn't crash — the OTP code will be visible in server logs
   if (!apiKey || !senderEmail) {
     console.warn(
-      "⚠️  Brevo not configured. Email not sent. Set BREVO_API_KEY and BREVO_SENDER_EMAIL."
+      "⚠️  Brevo not configured. Email not sent. Configure in Platform Settings (SuperAdmin) or set BREVO_API_KEY + BREVO_SENDER_EMAIL env vars."
     )
     console.warn(`   To: ${params.to}`)
     console.warn(`   Subject: ${params.subject}`)

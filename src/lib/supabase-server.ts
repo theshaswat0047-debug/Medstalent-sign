@@ -152,3 +152,85 @@ export async function fetchOrgById(orgId: string) {
   if (error) return null
   return data
 }
+
+// ============================================================
+// Platform Settings — Brevo config stored in DB (SuperAdmin-managed)
+// ============================================================
+
+export interface PlatformSettings {
+  brevo_api_key: string | null
+  brevo_sender_email: string | null
+  brevo_sender_name: string | null
+  brevo_webhook_secret: string | null
+  brevo_smtp_host: string | null
+  brevo_smtp_port: number | null
+  brevo_smtp_username: string | null
+  brevo_smtp_password: string | null
+  maintenance_mode: boolean
+  signups_enabled: boolean
+  enforce_2fa_admins: boolean
+}
+
+// In-memory cache (60-second TTL) so we don't hit the DB on every OTP send
+let settingsCache: { data: PlatformSettings | null; expires: number } | null = null
+const CACHE_TTL = 60 * 1000 // 60 seconds
+
+export async function getPlatformSettings(): Promise<PlatformSettings | null> {
+  // Return cached value if fresh
+  if (settingsCache && Date.now() < settingsCache.expires) {
+    return settingsCache.data
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("platform_settings")
+    .select("*")
+    .eq("id", 1)
+    .single()
+
+  if (error || !data) {
+    settingsCache = { data: null, expires: Date.now() + CACHE_TTL }
+    return null
+  }
+
+  settingsCache = { data: data as PlatformSettings, expires: Date.now() + CACHE_TTL }
+  return data as PlatformSettings
+}
+
+// Force-refresh the cache (called after SuperAdmin saves new settings)
+export function invalidateSettingsCache() {
+  settingsCache = null
+}
+
+// Get the effective Brevo config — DB first, env var fallback
+export async function getBrevoConfig(): Promise<{
+  apiKey: string
+  senderEmail: string
+  senderName: string
+}> {
+  const settings = await getPlatformSettings()
+  return {
+    apiKey: settings?.brevo_api_key || process.env.BREVO_API_KEY || "",
+    senderEmail: settings?.brevo_sender_email || process.env.BREVO_SENDER_EMAIL || "",
+    senderName: settings?.brevo_sender_name || process.env.BREVO_SENDER_NAME || "VaultSign",
+  }
+}
+
+// Save platform settings (SuperAdmin only — verify role before calling)
+export async function savePlatformSettings(input: Partial<PlatformSettings>, updatedBy: string): Promise<boolean> {
+  const { error } = await supabaseAdmin
+    .from("platform_settings")
+    .update({
+      ...input,
+      updated_by: updatedBy,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", 1)
+
+  if (error) {
+    console.error("savePlatformSettings error:", error.message)
+    return false
+  }
+
+  invalidateSettingsCache()
+  return true
+}

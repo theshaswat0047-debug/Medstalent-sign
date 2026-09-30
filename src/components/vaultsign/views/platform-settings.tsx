@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Icons } from "../icons"
 import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
@@ -11,22 +11,133 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
 
+interface Settings {
+  brevo_api_key_masked: string
+  brevo_api_key_set: boolean
+  brevo_sender_email: string
+  brevo_sender_name: string
+  brevo_webhook_secret_masked: string
+  brevo_webhook_secret_set: boolean
+  brevo_smtp_host: string
+  brevo_smtp_port: number
+  brevo_smtp_username: string
+  brevo_smtp_password_set: boolean
+  maintenance_mode: boolean
+  signups_enabled: boolean
+  enforce_2fa_admins: boolean
+}
+
 export function PlatformSettingsView() {
   const { toast } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [showKey, setShowKey] = useState(false)
+  const [showSecret, setShowSecret] = useState(false)
+
+  // Brevo config form state
+  const [apiKey, setApiKey] = useState("")
+  const [apiKeySet, setApiKeySet] = useState(false)
+  const [senderEmail, setSenderEmail] = useState("")
+  const [senderName, setSenderName] = useState("VaultSign")
+  const [webhookSecret, setWebhookSecret] = useState("")
+  const [webhookSecretSet, setWebhookSecretSet] = useState(false)
+
+  // Platform toggles
   const [maintenance, setMaintenance] = useState(false)
   const [signups, setSignups] = useState(true)
+  const [enforce2fa, setEnforce2fa] = useState(true)
+
+  // Load current settings on mount
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch("/api/platform/settings")
+        if (!res.ok) return
+        const data: Settings = await res.json()
+        setApiKey(data.brevo_api_key_masked || "")
+        setApiKeySet(data.brevo_api_key_set)
+        setSenderEmail(data.brevo_sender_email || "")
+        setSenderName(data.brevo_sender_name || "VaultSign")
+        setWebhookSecret(data.brevo_webhook_secret_masked || "")
+        setWebhookSecretSet(data.brevo_webhook_secret_set)
+        setMaintenance(data.maintenance_mode)
+        setSignups(data.signups_enabled)
+        setEnforce2fa(data.enforce_2fa_admins)
+      } catch {
+        // ignore — settings just aren't loaded yet
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const body: Record<string, unknown> = {
+        brevo_sender_email: senderEmail,
+        brevo_sender_name: senderName,
+        maintenance_mode: maintenance,
+        signups_enabled: signups,
+        enforce_2fa_admins: enforce2fa,
+      }
+      // Only send API key / webhook secret if user changed them (not masked)
+      if (apiKey && !apiKey.includes("••••")) {
+        body.brevo_api_key = apiKey
+      }
+      if (webhookSecret && !webhookSecret.includes("••••")) {
+        body.brevo_webhook_secret = webhookSecret
+      }
+
+      const res = await fetch("/api/platform/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast({ title: "Save failed", description: data.error, variant: "destructive" })
+        setSaving(false)
+        return
+      }
+
+      // Reload to get fresh masked values
+      const freshRes = await fetch("/api/platform/settings")
+      if (freshRes.ok) {
+        const freshData: Settings = await freshRes.json()
+        setApiKey(freshData.brevo_api_key_masked || "")
+        setApiKeySet(freshData.brevo_api_key_set)
+        setWebhookSecret(freshData.brevo_webhook_secret_masked || "")
+        setWebhookSecretSet(freshData.brevo_webhook_secret_set)
+      }
+
+      toast({ title: "Settings saved", description: "Platform configuration updated." })
+    } catch {
+      toast({ title: "Save failed", description: "Network error", variant: "destructive" })
+    }
+    setSaving(false)
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Icons.loader className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Platform Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Superadmin-only configuration. Affects every organization on the VaultSign platform.
+          SuperAdmin-only configuration. Affects every organization on the VaultSign platform.
         </p>
       </div>
 
-      {/* Brevo platform-level config */}
+      {/* Email Delivery config */}
       <Card className="p-5 shadow-card">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex items-start gap-3">
@@ -35,82 +146,89 @@ export function PlatformSettingsView() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold">Brevo Platform Integration</h2>
-                <Badge className="h-5 text-[10px] gap-1 bg-emerald-500 hover:bg-emerald-500 text-white">
-                  <span className="size-1.5 rounded-full bg-white animate-pulse-dot" />
-                  Connected
+                <h2 className="text-sm font-semibold">Email Delivery</h2>
+                <Badge className={cn("h-5 text-[10px] gap-1", apiKeySet ? "bg-emerald-500 hover:bg-emerald-500 text-white" : "bg-amber-500 hover:bg-amber-500 text-white")}>
+                  <span className={cn("size-1.5 rounded-full", apiKeySet ? "bg-white animate-pulse-dot" : "bg-white")} />
+                  {apiKeySet ? "Configured" : "Not configured"}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 max-w-md">
-                Master Brevo credentials used to send emails on behalf of all organizations.
-                Per-org sender identities are configured in each org's Settings.
+                Configure your email delivery provider. This is used to send OTP codes, signing invitations, and completion certificates. Stored encrypted at rest.
               </p>
             </div>
           </div>
           <Badge variant="outline" className="h-5 text-[10px] gap-1 shrink-0">
-            <Icons.shield className="size-2.5" /> Superadmin
+            <Icons.shield className="size-2.5" /> SuperAdmin
           </Badge>
         </div>
 
         <div className="space-y-4">
           <div>
-            <Label className="text-xs font-medium">Master Brevo API key</Label>
+            <Label className="text-xs font-medium">API Key {apiKeySet && <span className="text-emerald-600">✓ Set</span>}</Label>
             <div className="relative mt-1.5">
               <Input
                 type={showKey ? "text" : "password"}
-                defaultValue="xkeysib-master-3f8a9c2e1b7d4f6a8c0e2b9d7f4a1c3e5b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder={apiKeySet ? "•••••••• (saved) — enter new key to replace" : "Enter your Brevo API key (xkeysib-...)"}
                 className="h-10 pr-24 font-mono text-xs"
               />
               <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
                 <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setShowKey((s) => !s)}>
-                  <Icons.eye className="size-3.5" /> {showKey ? "Hide" : "Reveal"}
-                </Button>
-                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs">
-                  <Icons.copy className="size-3.5" />
+                  <Icons.eye className="size-3.5" /> {showKey ? "Hide" : "Show"}
                 </Button>
               </div>
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">Stored encrypted at rest (AES-256). Last rotated Sep 12, 2026.</p>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              Get your API key from Brevo → SMTP &amp; API → API Keys
+            </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <Label className="text-xs font-medium">Default sender email</Label>
-              <Input defaultValue="noreply@vaultsign.io" className="mt-1.5 h-9" readOnly />
+              <Label className="text-xs font-medium">Sender email (must be verified in Brevo)</Label>
+              <Input
+                type="email"
+                value={senderEmail}
+                onChange={(e) => setSenderEmail(e.target.value)}
+                placeholder="sign@notifications.yourdomain.com"
+                className="mt-1.5 h-9"
+              />
             </div>
             <div>
-              <Label className="text-xs font-medium">Default sender name</Label>
-              <Input defaultValue="VaultSign Notifications" className="mt-1.5 h-9" readOnly />
-            </div>
-            <div>
-              <Label className="text-xs font-medium">Webhook endpoint</Label>
-              <Input defaultValue="https://api.vaultsign.io/webhooks/brevo" className="mt-1.5 h-9 font-mono text-xs" readOnly />
-            </div>
-            <div>
-              <Label className="text-xs font-medium">Webhook secret</Label>
-              <Input defaultValue="whsec_master_8a4f2c1b9d7e" className="mt-1.5 h-9 font-mono text-xs" readOnly />
+              <Label className="text-xs font-medium">Sender name</Label>
+              <Input
+                value={senderName}
+                onChange={(e) => setSenderName(e.target.value)}
+                placeholder="VaultSign"
+                className="mt-1.5 h-9"
+              />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2">
-            {[
-              { l: "Emails sent (24h)", v: "12,847" },
-              { l: "Delivery rate", v: "99.4%" },
-              { l: "Open rate", v: "78.2%" },
-              { l: "Bounce rate", v: "0.4%" },
-            ].map((m) => (
-              <div key={m.l} className="p-3 rounded-lg bg-secondary/50">
-                <div className="text-lg font-semibold tabular-nums">{m.v}</div>
-                <div className="text-[10px] text-muted-foreground">{m.l}</div>
+          <div>
+            <Label className="text-xs font-medium">Webhook secret {webhookSecretSet && <span className="text-emerald-600">✓ Set</span>}</Label>
+            <div className="relative mt-1.5">
+              <Input
+                type={showSecret ? "text" : "password"}
+                value={webhookSecret}
+                onChange={(e) => setWebhookSecret(e.target.value)}
+                placeholder={webhookSecretSet ? "•••••••• (saved) — enter new secret to replace" : "Optional: webhook secret for verifying inbound webhooks"}
+                className="h-9 pr-24 font-mono text-xs"
+              />
+              <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setShowSecret((s) => !s)}>
+                  <Icons.eye className="size-3.5" /> {showSecret ? "Hide" : "Show"}
+                </Button>
               </div>
-            ))}
+            </div>
           </div>
         </div>
 
         <div className="flex items-center justify-end gap-2 mt-5 pt-4 border-t border-border">
-          <Button variant="ghost" size="sm" className="h-9">Cancel</Button>
-          <Button size="sm" className="h-9 gap-1.5" onClick={() => toast({ title: "Saved", description: "Brevo credentials updated. Webhook re-verified." })}>
-            <Icons.check2 className="size-3.5" /> Save & verify
+          <Button size="sm" className="h-9 gap-1.5" onClick={handleSave} disabled={saving}>
+            {saving ? <Icons.loader className="size-3.5 animate-spin" /> : <Icons.check2 className="size-3.5" />}
+            {saving ? "Saving..." : "Save email config"}
           </Button>
         </div>
       </Card>
@@ -123,49 +241,52 @@ export function PlatformSettingsView() {
           <ToggleRow
             label="Maintenance mode"
             desc="Display a read-only banner to all users. New sends are blocked."
-            on={maintenance}
-            onChange={setMaintenance}
+            checked={maintenance}
+            onCheckedChange={setMaintenance}
           />
           <ToggleRow
             label="Allow new organization signups"
-            desc="Public signup page at vaultsign.io/signup is active."
-            on={signups}
-            onChange={setSignups}
+            desc="Public signup page at /signup is active."
+            checked={signups}
+            onCheckedChange={setSignups}
           />
           <ToggleRow
             label="Enforce 2FA for all org admins"
             desc="Org admins must enable TOTP within 7 days of signup."
-            on
-            onChange={() => {}}
+            checked={enforce2fa}
+            onCheckedChange={setEnforce2fa}
           />
-          <ToggleRow
-            label="Auto-suspend on payment failure"
-            desc="After 3 failed retries, suspend the organization automatically."
-            on
-            onChange={() => {}}
-          />
+        </div>
+        <div className="flex items-center justify-end gap-2 mt-5 pt-4 border-t border-border">
+          <Button size="sm" className="h-9 gap-1.5" onClick={handleSave} disabled={saving}>
+            {saving ? <Icons.loader className="size-3.5 animate-spin" /> : <Icons.check2 className="size-3.5" />}
+            {saving ? "Saving..." : "Save toggles"}
+          </Button>
         </div>
       </Card>
 
-      {/* Feature flags */}
+      {/* Compliance */}
       <Card className="p-5 shadow-card">
-        <h2 className="text-sm font-semibold mb-1">Feature flags</h2>
-        <p className="text-xs text-muted-foreground mb-4">Roll out features to specific plans or all orgs.</p>
-        <div className="space-y-2">
+        <h2 className="text-sm font-semibold mb-1">Compliance certifications</h2>
+        <p className="text-xs text-muted-foreground mb-4">VaultSign is independently audited.</p>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           {[
-            { f: "AI smart field detection", plans: "Enterprise only", on: true },
-            { f: "Bulk send (CSV)", plans: "Business + Enterprise", on: true },
-            { f: "Conditional content blocks", plans: "Enterprise only", on: true },
-            { f: "WhatsApp delivery", plans: "Beta · Enterprise", on: false },
-            { f: "Stripe billing pass-through", plans: "All plans", on: true },
-            { f: "Custom signing domain", plans: "Business + Enterprise", on: true },
-          ].map((flag) => (
-            <div key={flag.f} className="flex items-center justify-between p-3 rounded-lg bg-secondary/40">
-              <div className="min-w-0">
-                <div className="text-sm font-medium">{flag.f}</div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">{flag.plans}</div>
+            { name: "SOC 2 Type II", date: "Aug 2026" },
+            { name: "GDPR", date: "Ongoing" },
+            { name: "HIPAA", date: "BAAs signed" },
+            { name: "eIDAS QES", date: "EU certified" },
+            { name: "ESIGN Act", date: "US compliant" },
+            { name: "UETA", date: "US compliant" },
+            { name: "ISO 27001", date: "Jun 2026" },
+            { name: "PCI DSS", date: "Via Stripe" },
+            { name: "CCPA", date: "Ongoing" },
+          ].map((c) => (
+            <div key={c.name} className="p-3 rounded-lg border border-border bg-secondary/40">
+              <div className="flex items-center gap-1.5">
+                <Icons.check className="size-3.5 text-emerald-600" />
+                <span className="text-xs font-medium">{c.name}</span>
               </div>
-              <Switch defaultChecked={flag.on} />
+              <div className="text-[10px] text-muted-foreground mt-0.5">{c.date}</div>
             </div>
           ))}
         </div>
@@ -175,9 +296,9 @@ export function PlatformSettingsView() {
 }
 
 function ToggleRow({
-  label, desc, on, onChange,
+  label, desc, checked, onCheckedChange,
 }: {
-  label: string; desc: string; on: boolean; onChange: (v: boolean) => void
+  label: string; desc: string; checked: boolean; onCheckedChange: (v: boolean) => void
 }) {
   return (
     <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/40">
@@ -185,7 +306,7 @@ function ToggleRow({
         <div className="text-sm font-medium">{label}</div>
         <div className="text-[11px] text-muted-foreground mt-0.5">{desc}</div>
       </div>
-      <Switch checked={on} onCheckedChange={onChange} />
+      <Switch checked={checked} onCheckedChange={onCheckedChange} />
     </div>
   )
 }
