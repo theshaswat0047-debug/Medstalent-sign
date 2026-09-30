@@ -44,10 +44,20 @@ export default function SuperAdminPage() {
       }
 
       setStep("otp")
-      toast({
-        title: "Verification code sent",
-        description: `A 6-digit code was sent to ${email}. Check your inbox (and spam folder).`,
-      })
+
+      // If Brevo isn't configured, show a warning with the code location
+      if (data.warning) {
+        toast({
+          title: "OTP generated but email NOT sent",
+          description: "Brevo isn't configured. Check Vercel function logs for the code, or add BREVO_API_KEY + BREVO_SENDER_EMAIL env vars.",
+          variant: "destructive",
+        })
+      } else {
+        toast({
+          title: "Verification code sent",
+          description: `A 6-digit code was sent to ${email}. Check your inbox (and spam folder).`,
+        })
+      }
     } catch {
       setLoading(false)
       setError("Network error. Please try again.")

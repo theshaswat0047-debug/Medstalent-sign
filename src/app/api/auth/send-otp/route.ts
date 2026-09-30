@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
-import { getUserByEmail, createOtpCode } from "@/lib/supabase-server"
+import { getUserByEmail, createOtpCode, getBrevoConfig } from "@/lib/supabase-server"
 import { sendOtpEmail } from "@/lib/brevo"
 
 export async function POST(req: NextRequest) {
@@ -20,7 +20,6 @@ export async function POST(req: NextRequest) {
     const user = await getUserByEmail(email)
     if (!user) {
       // Don't reveal whether email exists — return success anyway
-      // BUT include a hint in the response for debugging
       console.warn(`[send-otp] User not found: ${email}`)
       return NextResponse.json({ success: true, message: "If an account exists, an OTP has been sent." })
     }
@@ -41,6 +40,17 @@ export async function POST(req: NextRequest) {
     if (!stored) {
       console.error(`[send-otp] Failed to store OTP code in DB for ${email}`)
       return NextResponse.json({ error: "Failed to generate OTP. Check that the otp_codes table exists in Supabase." }, { status: 500 })
+    }
+
+    // Check if Brevo is configured BEFORE trying to send
+    const brevoConfig = await getBrevoConfig()
+    if (!brevoConfig.apiKey || !brevoConfig.senderEmail) {
+      console.warn(`[send-otp] Brevo NOT configured. OTP code for ${email}: ${code}`)
+      return NextResponse.json({
+        success: true,
+        message: "OTP generated but email NOT sent — Brevo not configured.",
+        warning: "Brevo API key or sender email is not set. The OTP code is in the Vercel function logs. Add BREVO_API_KEY and BREVO_SENDER_EMAIL to Vercel env vars, or configure in Platform Settings.",
+      })
     }
 
     // Send via Brevo
