@@ -5,7 +5,38 @@
 import NextAuth from "next-auth"
 import Credentials from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
-import { getUserByEmail, fetchOrgById, type AppUser } from "./supabase-server"
+import { getUserByEmail, fetchOrgById } from "./supabase-server"
+
+// ============================================================
+// Role hierarchy
+// ============================================================
+// Platform staff (manage the platform, DON'T use the product):
+//   SUPERADMIN — OTP login at /superadmin, full platform access
+//   ORG_ADMIN  — password login at /organizationadmin, HQ deputy
+//
+// Customers (use the product, NEVER see platform):
+//   ORG_OWNER    — created an org account, admin of their org
+//   ORG_MEMBER   — invited by org owner
+//   PERSONAL_USER — personal account, no org
+// ============================================================
+
+export type Role =
+  | "SUPERADMIN"      // platform — OTP login
+  | "ORG_ADMIN"       // platform — HQ deputy, password login
+  | "ORG_OWNER"       // customer — created org account
+  | "ORG_MEMBER"      // customer — invited by org owner
+  | "PERSONAL_USER"   // customer — personal account
+
+export const PLATFORM_ROLES: Role[] = ["SUPERADMIN", "ORG_ADMIN"]
+export const CUSTOMER_ROLES: Role[] = ["ORG_OWNER", "ORG_MEMBER", "PERSONAL_USER"]
+
+export function isPlatformRole(role: string | undefined | null): boolean {
+  return !!role && (PLATFORM_ROLES as string[]).includes(role)
+}
+
+export function isCustomerRole(role: string | undefined | null): boolean {
+  return !!role && (CUSTOMER_ROLES as string[]).includes(role)
+}
 
 // Extend the session/user types to include our custom fields
 declare module "next-auth" {
@@ -44,7 +75,6 @@ declare module "next-auth/jwt" {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  // JWT session strategy — works on Vercel free tier (no DB session table needed)
   session: {
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -62,29 +92,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         const user = await getUserByEmail(credentials.email as string)
-        if (!user) {
-          return null
-        }
-
-        // Check status
-        if (user.status === "disabled") {
-          return null
-        }
+        if (!user) return null
+        if (user.status === "disabled") return null
 
         // Verify password (SuperAdmin has null password_hash — can't use credentials)
-        if (!user.password_hash) {
-          return null
-        }
+        if (!user.password_hash) return null
 
         const valid = await bcrypt.compare(
           credentials.password as string,
           user.password_hash
         )
-        if (!valid) {
-          return null
-        }
+        if (!valid) return null
 
-        // Fetch org name if user belongs to an org
         let orgName: string | null = null
         if (user.org_id) {
           const org = await fetchOrgById(user.org_id)
@@ -103,8 +122,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       },
     }),
-    // Custom OTP provider — verifies via a special token format
-    // that's set after OTP verification
     Credentials({
       id: "otp",
       name: "otp",
@@ -113,35 +130,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         otpToken: { label: "OTP Token", type: "text" },
       },
       async authorize(credentials) {
-        // The otpToken is a verified email signed by our /api/auth/verify-otp route.
-        // We check that the email matches and the user exists.
-        if (!credentials?.email || !credentials?.otpToken) {
-          return null
-        }
+        if (!credentials?.email || !credentials?.otpToken) return null
 
-        // otpToken format: "verified:<email>:<timestamp>"
-        // We verify the email matches and timestamp is recent (< 2 minutes)
         const token = credentials.otpToken as string
         const email = credentials.email as string
 
-        if (!token.startsWith("verified:")) {
-          return null
-        }
+        if (!token.startsWith("verified:")) return null
 
         const [, tokenEmail, timestamp] = token.split(":")
-        if (tokenEmail !== email.toLowerCase().trim()) {
-          return null
-        }
+        if (tokenEmail !== email.toLowerCase().trim()) return null
 
         const elapsed = Date.now() - parseInt(timestamp)
-        if (elapsed > 2 * 60 * 1000) {
-          return null // token expired
-        }
+        if (elapsed > 2 * 60 * 1000) return null
 
         const user = await getUserByEmail(email)
-        if (!user || user.status === "disabled") {
-          return null
-        }
+        if (!user || user.status === "disabled") return null
 
         let orgName: string | null = null
         if (user.org_id) {
@@ -164,7 +167,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user }) {
-      // Called on sign-in — add custom fields to the JWT
       if (user) {
         token.role = (user as any).role
         token.accountType = (user as any).accountType
@@ -175,10 +177,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token
     },
     async session({ session, token }) {
-      // Called on every session read — add custom fields from JWT
       if (session.user) {
         session.user.id = token.sub!
-        session.user.role = token.role ?? "USER"
+        session.user.role = token.role ?? "PERSONAL_USER"
         session.user.accountType = token.accountType ?? "PERSONAL"
         session.user.orgId = token.orgId ?? null
         session.user.orgName = token.orgName ?? null
@@ -187,22 +188,52 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session
     },
     authorized({ auth, request: { nextUrl } }) {
-      // Protect routes — redirect to /login if not authenticated
       const isLoggedIn = !!auth?.user
+      const role = auth?.user?.role
       const { pathname } = nextUrl
 
-      // Public routes — no auth required
-      const publicRoutes = ["/login", "/signup", "/superadmin", "/organizationadmin", "/api/auth"]
+      // ── Public routes (no auth required) ──────────────────
+      const publicRoutes = ["/login", "/signup", "/api/auth"]
       if (publicRoutes.some((r) => pathname.startsWith(r))) {
         return true
       }
 
-      // All other routes require login
-      return isLoggedIn
+      // ── SuperAdmin OTP login page ─────────────────────────
+      // If already logged in as a customer, redirect away from /superadmin
+      if (pathname === "/superadmin") {
+        if (isLoggedIn && isCustomerRole(role)) {
+          return Response.redirect(new URL("/", nextUrl))
+        }
+        return true // allow (not logged in, or platform staff)
+      }
+
+      // ── OrganizationAdmin HQ login page ───────────────────
+      if (pathname === "/organizationadmin") {
+        if (isLoggedIn && isCustomerRole(role)) {
+          return Response.redirect(new URL("/", nextUrl))
+        }
+        return true
+      }
+
+      // ── All other routes require login ────────────────────
+      if (!isLoggedIn) {
+        return false // middleware will redirect to /login
+      }
+
+      // ── Role-based route protection ───────────────────────
+      // Platform staff can access everything (they manage the platform)
+      // Customers are blocked from platform-internal API routes
+      if (isCustomerRole(role)) {
+        const blockedApiRoutes = ["/api/platform/"]
+        if (blockedApiRoutes.some((r) => pathname.startsWith(r))) {
+          return false
+        }
+      }
+
+      return true
     },
   },
   pages: {
-    // We use custom pages — Auth.js won't render its default pages
     signIn: "/login",
   },
 })

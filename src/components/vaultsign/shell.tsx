@@ -26,59 +26,61 @@ import { SettingsView } from "./views/settings"
 import { TeamView } from "./views/team"
 import { PlatformOrganizationsView } from "./views/platform-organizations"
 import { PlatformSettingsView } from "./views/platform-settings"
+import { PlatformApprovalsView } from "./views/platform-approvals"
 
-export type Role = "SUPERADMIN" | "ORG_ADMIN" | "MANAGER" | "USER"
+export type Role = "SUPERADMIN" | "ORG_ADMIN" | "ORG_OWNER" | "ORG_MEMBER" | "PERSONAL_USER"
 export type ViewKey =
+  // Product views (customers)
   | "dashboard" | "templates" | "documents" | "editor"
   | "tracking" | "analytics" | "team" | "settings"
-  | "platform_organizations" | "platform_settings"
+  // Platform views (HQ staff)
+  | "platform_organizations" | "platform_approvals" | "platform_settings"
 
 interface NavItem {
   key: ViewKey
   label: string
   icon: string
-  /** Which roles can see this nav item. Empty = all roles. */
-  roles?: Role[]
+  /** Which roles can see this nav item */
+  roles: Role[]
   /** Section label in the sidebar */
-  section: "workspace" | "platform" | "admin"
+  section: "product" | "platform"
 }
 
-// Role-aware nav. Each role sees a different set of views.
+// Role-aware nav — PLATFORM STAFF see only platform views,
+// CUSTOMERS see only product views. Complete separation.
 const NAV_ITEMS: NavItem[] = [
-  // Workspace — everyone
-  { key: "dashboard", label: "Dashboard", icon: "dashboard", section: "workspace" },
-  { key: "templates", label: "Templates", icon: "documents", section: "workspace" },
-  { key: "documents", label: "Documents", icon: "sign", section: "workspace" },
-  { key: "editor", label: "Editor", icon: "editor", section: "workspace", roles: ["SUPERADMIN", "ORG_ADMIN", "MANAGER", "USER"] },
-  { key: "tracking", label: "Tracking", icon: "tracking", section: "workspace" },
-  { key: "analytics", label: "Analytics", icon: "analytics", section: "workspace", roles: ["SUPERADMIN", "ORG_ADMIN", "MANAGER"] },
+  // ── Product views (customers only) ──────────────────────
+  { key: "dashboard", label: "Dashboard", icon: "dashboard", section: "product", roles: ["ORG_OWNER", "ORG_MEMBER", "PERSONAL_USER"] },
+  { key: "templates", label: "Templates", icon: "documents", section: "product", roles: ["ORG_OWNER", "ORG_MEMBER", "PERSONAL_USER"] },
+  { key: "documents", label: "Documents", icon: "sign", section: "product", roles: ["ORG_OWNER", "ORG_MEMBER", "PERSONAL_USER"] },
+  { key: "editor", label: "Editor", icon: "editor", section: "product", roles: ["ORG_OWNER", "ORG_MEMBER", "PERSONAL_USER"] },
+  { key: "tracking", label: "Tracking", icon: "tracking", section: "product", roles: ["ORG_OWNER", "ORG_MEMBER", "PERSONAL_USER"] },
+  { key: "analytics", label: "Analytics", icon: "analytics", section: "product", roles: ["ORG_OWNER", "ORG_MEMBER"] },
+  { key: "team", label: "Team", icon: "team", section: "product", roles: ["ORG_OWNER", "ORG_MEMBER"] },
+  { key: "settings", label: "Settings", icon: "settings", section: "product", roles: ["ORG_OWNER", "PERSONAL_USER"] },
 
-  // Org admin — manage their organization
-  { key: "team", label: "Team", icon: "team", section: "admin", roles: ["SUPERADMIN", "ORG_ADMIN", "MANAGER"] },
-  { key: "settings", label: "Settings", icon: "settings", section: "admin", roles: ["ORG_ADMIN"] },
-
-  // Platform — superadmin only
-  { key: "platform_organizations", label: "Organizations", icon: "building", section: "platform", roles: ["SUPERADMIN"] },
-  { key: "platform_settings", label: "Platform Settings", icon: "shield", section: "platform", roles: ["SUPERADMIN"] },
+  // ── Platform views (HQ staff only) ──────────────────────
+  { key: "platform_organizations", label: "Organizations", icon: "building", section: "platform", roles: ["SUPERADMIN", "ORG_ADMIN"] },
+  { key: "platform_approvals", label: "Approvals", icon: "check", section: "platform", roles: ["SUPERADMIN", "ORG_ADMIN"] },
+  { key: "platform_settings", label: "Platform Settings", icon: "shield", section: "platform", roles: ["SUPERADMIN", "ORG_ADMIN"] },
 ]
 
 const ROLE_PROFILES: Record<Role, { name: string; email: string; avatar: string; orgLabel: string; scope: string }> = {
-  SUPERADMIN: { name: "Maya Krishnan", email: "maya@vaultsign.io", avatar: "MK", orgLabel: "VaultSign Platform", scope: "Platform-wide access" },
-  ORG_ADMIN:  { name: "Aisha Khan", email: "aisha.k@vaultsign.io", avatar: "AK", orgLabel: "Acme Holdings", scope: "Organization admin" },
-  MANAGER:    { name: "Priya Nair", email: "priya.n@vaultsign.io", avatar: "PN", orgLabel: "Acme · Legal Dept", scope: "Team manager" },
-  USER:       { name: "Vikram Shah", email: "vikram.s@vaultsign.io", avatar: "VS", orgLabel: "Acme · Sales", scope: "Standard user" },
+  SUPERADMIN:    { name: "Maya Krishnan", email: "maya@vaultsign.io", avatar: "MK", orgLabel: "VaultSign Platform", scope: "Platform-wide access" },
+  ORG_ADMIN:     { name: "HQ Deputy", email: "deputy@vaultsign.io", avatar: "HD", orgLabel: "VaultSign HQ", scope: "Platform deputy" },
+  ORG_OWNER:     { name: "Org Owner", email: "", avatar: "OO", orgLabel: "—", scope: "Organization owner" },
+  ORG_MEMBER:    { name: "Team Member", email: "", avatar: "TM", orgLabel: "—", scope: "Team member" },
+  PERSONAL_USER: { name: "Personal User", email: "", avatar: "PU", orgLabel: "Personal account", scope: "Personal account" },
 }
 
 // Helper: nav items visible to a given role
 function navForRole(role: Role): NavItem[] {
-  return NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role))
+  return NAV_ITEMS.filter((item) => item.roles.includes(role))
 }
 
-// Helper: when switching roles, land on a sensible default view
+// Helper: default view per role — platform staff → organizations, customers → dashboard
 function defaultViewForRole(role: Role): ViewKey {
-  if (role === "SUPERADMIN") return "platform_organizations"
-  if (role === "ORG_ADMIN") return "dashboard"
-  if (role === "MANAGER") return "dashboard"
+  if (role === "SUPERADMIN" || role === "ORG_ADMIN") return "platform_organizations"
   return "dashboard"
 }
 
@@ -87,7 +89,7 @@ export function AppShell() {
   const { data: session } = useSession()
 
   // Role comes from the Auth.js session (JWT)
-  const role: Role = (session?.user?.role as Role) ?? "USER"
+  const role: Role = (session?.user?.role as Role) ?? "PERSONAL_USER"
   const [view, setView] = useState<ViewKey>(defaultViewForRole(role))
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const openSendModal = useAppStore((s) => s.openSendModal)
@@ -97,11 +99,12 @@ export function AppShell() {
     avatar: session?.user?.avatar ?? session?.user?.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2) ?? "??",
     name: session?.user?.name ?? "User",
     email: session?.user?.email ?? "",
-    orgLabel: session?.user?.orgName ?? (session?.user?.accountType === "PERSONAL" ? "Personal account" : "—"),
+    orgLabel: session?.user?.orgName ?? (role === "PERSONAL_USER" ? "Personal account" : "—"),
     scope: role === "SUPERADMIN" ? "Platform-wide access"
-      : role === "ORG_ADMIN" ? "Organization admin"
-      : role === "MANAGER" ? "Team manager"
-      : "Standard user",
+      : role === "ORG_ADMIN" ? "Platform deputy"
+      : role === "ORG_OWNER" ? "Organization owner"
+      : role === "ORG_MEMBER" ? "Team member"
+      : "Personal account",
   }
 
   const visibleNav = navForRole(role)
@@ -132,7 +135,8 @@ export function AppShell() {
       case "team":        return <TeamView />
       case "settings":    return <SettingsView role={role} />
       case "platform_organizations": return <PlatformOrganizationsView />
-      case "platform_settings":       return <PlatformSettingsView />
+      case "platform_approvals":    return <PlatformApprovalsView />
+      case "platform_settings":     return <PlatformSettingsView />
     }
   }
 
@@ -336,15 +340,14 @@ function SidebarContent({
 }) {
   const visibleNav = navForRole(role)
   const sections: { key: NavItem["section"]; label: string }[] = [
-    { key: "workspace", label: "Workspace" },
-    { key: "admin", label: role === "SUPERADMIN" ? "Administration" : "Manage org" },
+    { key: "product", label: "Workspace" },
     { key: "platform", label: "Platform" },
   ]
 
   return (
     <div className="flex flex-col h-full">
-      {/* New document button — hidden for superadmin (they don't send docs) */}
-      {role !== "SUPERADMIN" && (
+      {/* New document button — hidden for platform staff (they don't send docs) */}
+      {(role === "ORG_OWNER" || role === "ORG_MEMBER" || role === "PERSONAL_USER") && (
         <div className="p-3">
           <Button className="w-full h-9 gap-2 shadow-card" onClick={() => openSendModal()}>
             <Icons.plus className="size-4" />
@@ -352,15 +355,15 @@ function SidebarContent({
           </Button>
         </div>
       )}
-      {role === "SUPERADMIN" && (
+      {(role === "SUPERADMIN" || role === "ORG_ADMIN") && (
         <div className="p-3">
           <div className="px-3 py-2.5 rounded-lg bg-secondary/60 border border-border flex items-center gap-2">
             <div className="size-7 rounded-md bg-foreground flex items-center justify-center">
               <Icons.shield className="size-3.5 text-background" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-semibold">Superadmin mode</div>
-              <div className="text-[10px] text-muted-foreground">Platform-wide access</div>
+              <div className="text-xs font-semibold">{role === "SUPERADMIN" ? "SuperAdmin mode" : "Platform staff"}</div>
+              <div className="text-[10px] text-muted-foreground">{role === "SUPERADMIN" ? "Platform-wide access" : "HQ deputy access"}</div>
             </div>
           </div>
         </div>

@@ -34,7 +34,7 @@ export interface AppUser {
   full_name: string
   phone: string | null
   avatar: string | null
-  role: "SUPERADMIN" | "ORG_ADMIN" | "MANAGER" | "USER" | "PERSONAL"
+  role: "SUPERADMIN" | "ORG_ADMIN" | "ORG_OWNER" | "ORG_MEMBER" | "PERSONAL_USER"
   account_type: "ORG" | "PERSONAL"
   org_id: string | null
   purpose: string | null
