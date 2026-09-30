@@ -1,7 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
 import Image from "next/image"
 import { Icons } from "@/components/vaultsign/icons"
 import { cn } from "@/lib/utils"
@@ -9,7 +10,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase-client"
 import { SupabaseConfigWarning } from "@/components/vaultsign/supabase-config-warning"
 
 type Step = "email" | "otp"
@@ -23,35 +23,35 @@ export default function SuperAdminPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // If already logged in, redirect to app
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.replace("/")
-    })
-  }, [router])
-
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setLoading(true)
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: false },
-    })
+    try {
+      const res = await fetch("/api/auth/send-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json()
 
-    setLoading(false)
+      setLoading(false)
 
-    if (error) {
-      setError(error.message)
-      return
+      if (!res.ok) {
+        setError(data.error || "Failed to send OTP")
+        return
+      }
+
+      setStep("otp")
+      toast({
+        title: "Verification code sent",
+        description: `A 6-digit code was sent to ${email}. Check your inbox (and spam folder).`,
+      })
+    } catch {
+      setLoading(false)
+      setError("Network error. Please try again.")
     }
-
-    setStep("otp")
-    toast({
-      title: "OTP sent via email",
-      description: `A 6-digit code was sent to ${email}. Check your inbox (and spam folder).`,
-    })
   }
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
@@ -59,26 +59,47 @@ export default function SuperAdminPage() {
     setError("")
     setLoading(true)
 
-    const { error } = await supabase.auth.verifyOtp({
-      email,
-      token: otp,
-      type: "email",
-    })
+    try {
+      // 1. Verify the OTP code via our API
+      const verifyRes = await fetch("/api/auth/verify-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code: otp }),
+      })
+      const verifyData = await verifyRes.json()
 
-    setLoading(false)
+      if (!verifyRes.ok) {
+        setLoading(false)
+        setError(verifyData.error || "Invalid OTP code")
+        return
+      }
 
-    if (error) {
-      setError(error.message)
-      return
+      // 2. Sign in via Auth.js using the OTP token
+      const result = await signIn("otp", {
+        email,
+        otpToken: verifyData.otpToken,
+        redirect: false,
+      })
+
+      setLoading(false)
+
+      if (result?.error) {
+        setError("Failed to sign in. Please try again.")
+        return
+      }
+
+      toast({ title: "Welcome back", description: "SuperAdmin authenticated via OTP" })
+      router.replace("/")
+      router.refresh()
+    } catch {
+      setLoading(false)
+      setError("Network error. Please try again.")
     }
-
-    toast({ title: "Welcome back", description: "SuperAdmin authenticated via Email OTP" })
-    router.replace("/")
   }
 
   return (
     <div className="min-h-screen bg-background flex flex-col lg:flex-row">
-      {/* Left — brand panel */}
+      {/* Left — brand panel (dark) */}
       <div className="hidden lg:flex lg:flex-1 flex-col justify-between p-12 bg-foreground text-background relative overflow-hidden">
         <div className="absolute inset-0 bg-dotted opacity-10" style={{ filter: "invert(1)" }} />
         <div className="relative flex items-center gap-3">
@@ -92,7 +113,7 @@ export default function SuperAdminPage() {
           <h1 className="text-3xl font-bold tracking-tight leading-tight">
             Platform control,
             <br />
-            one OTP away.
+            one code away.
           </h1>
           <p className="text-sm text-background/70 leading-relaxed">
             Enter your email and we'll send a one-time passcode. No password to remember —
@@ -109,6 +130,8 @@ export default function SuperAdminPage() {
             <Image src="/vaultsign-logo.png" alt="VaultSign" width={96} height={44} className="h-9 w-auto object-contain" />
           </div>
 
+          <SupabaseConfigWarning />
+
           {step === "email" && (
             <>
               <div className="mb-6">
@@ -121,8 +144,6 @@ export default function SuperAdminPage() {
                 </p>
               </div>
 
-              <SupabaseConfigWarning />
-
               <form onSubmit={handleSendOtp} className="space-y-4">
                 <div>
                   <Label htmlFor="email" className="text-xs font-medium">SuperAdmin email</Label>
@@ -131,7 +152,7 @@ export default function SuperAdminPage() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="maya@vaultsign.io"
+                    placeholder="you@vaultsign.io"
                     className="mt-1.5 h-10"
                     required
                     autoFocus
@@ -147,26 +168,18 @@ export default function SuperAdminPage() {
 
                 <Button type="submit" className="w-full h-10 gap-1.5" disabled={loading}>
                   {loading ? <Icons.loader className="size-4 animate-spin" /> : <Icons.mail className="size-4" />}
-                  {loading ? "Sending OTP..." : "Send OTP code"}
+                  {loading ? "Sending code..." : "Send OTP code"}
                 </Button>
               </form>
 
               <div className="mt-6 pt-6 border-t border-border">
-                <p className="text-[11px] text-muted-foreground mb-2">
-                  Not a SuperAdmin? Go to:
-                </p>
+                <p className="text-[11px] text-muted-foreground mb-2">Not a SuperAdmin? Go to:</p>
                 <div className="flex gap-3 text-xs">
-                  <button onClick={() => router.push("/signup")} className="font-medium text-foreground hover:underline">
-                    Sign up
-                  </button>
+                  <button onClick={() => router.push("/signup")} className="font-medium text-foreground hover:underline">Sign up</button>
                   <span className="text-muted-foreground">·</span>
-                  <button onClick={() => router.push("/login")} className="font-medium text-foreground hover:underline">
-                    Customer login
-                  </button>
+                  <button onClick={() => router.push("/login")} className="font-medium text-foreground hover:underline">Customer login</button>
                   <span className="text-muted-foreground">·</span>
-                  <button onClick={() => router.push("/organizationadmin")} className="font-medium text-foreground hover:underline">
-                    Org Admin (HQ)
-                  </button>
+                  <button onClick={() => router.push("/organizationadmin")} className="font-medium text-foreground hover:underline">Org Admin (HQ)</button>
                 </div>
               </div>
             </>
@@ -220,10 +233,7 @@ export default function SuperAdminPage() {
               </form>
 
               <button
-                onClick={() => {
-                  setOtp("")
-                  handleSendOtp(new Event("submit") as unknown as React.FormEvent)
-                }}
+                onClick={() => { setOtp(""); handleSendOtp(new Event("submit") as unknown as React.FormEvent) }}
                 className="w-full text-center text-xs text-muted-foreground hover:text-foreground mt-4"
               >
                 Didn't receive it? Resend code

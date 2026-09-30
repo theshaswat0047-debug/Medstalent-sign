@@ -2,13 +2,11 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useSession, signOut } from "next-auth/react"
 import Image from "next/image"
 import { Icons } from "./icons"
-import { BrandMark } from "./brand-mark"
 import { SendDocumentModal } from "./send-modal"
 import { useAppStore } from "@/lib/store"
-import { useSession } from "@/lib/use-session"
-import { supabase } from "@/lib/supabase-client"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -86,20 +84,20 @@ function defaultViewForRole(role: Role): ViewKey {
 
 export function AppShell() {
   const router = useRouter()
-  const { profile, org } = useSession()
+  const { data: session } = useSession()
 
-  // Role comes from the Supabase profiles table
-  const role: Role = profile?.role ?? "USER"
+  // Role comes from the Auth.js session (JWT)
+  const role: Role = (session?.user?.role as Role) ?? "USER"
   const [view, setView] = useState<ViewKey>(defaultViewForRole(role))
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const openSendModal = useAppStore((s) => s.openSendModal)
 
-  // Derive display profile from Supabase session
+  // Derive display profile from Auth.js session
   const profileDisplay = {
-    avatar: profile?.avatar ?? "??",
-    name: profile?.full_name ?? "User",
-    email: profile?.email ?? "",
-    orgLabel: org?.name ?? (profile?.account_type === "PERSONAL" ? "Personal account" : "—"),
+    avatar: session?.user?.avatar ?? session?.user?.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2) ?? "??",
+    name: session?.user?.name ?? "User",
+    email: session?.user?.email ?? "",
+    orgLabel: session?.user?.orgName ?? (session?.user?.accountType === "PERSONAL" ? "Personal account" : "—"),
     scope: role === "SUPERADMIN" ? "Platform-wide access"
       : role === "ORG_ADMIN" ? "Organization admin"
       : role === "MANAGER" ? "Team manager"
@@ -112,7 +110,7 @@ export function AppShell() {
   const effectiveView: ViewKey = visibleNav.some((n) => n.key === view) ? view : defaultViewForRole(role)
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
+    await signOut({ redirect: false })
     router.replace("/login")
   }
 

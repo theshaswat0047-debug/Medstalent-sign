@@ -1,14 +1,14 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { signIn } from "next-auth/react"
 import Image from "next/image"
 import { Icons } from "@/components/vaultsign/icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
-import { supabase } from "@/lib/supabase-client"
 import { SupabaseConfigWarning } from "@/components/vaultsign/supabase-config-warning"
 
 export default function OrganizationAdminPage() {
@@ -19,27 +19,25 @@ export default function OrganizationAdminPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.replace("/")
-    })
-  }, [router])
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setLoading(true)
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    const result = await signIn("credentials", {
+      email, password, redirect: false,
+    })
+
     setLoading(false)
 
-    if (error) {
-      setError(error.message)
+    if (result?.error) {
+      setError("Invalid email or password.")
       return
     }
 
     toast({ title: "Welcome back", description: "Organization Admin signed in" })
     router.replace("/")
+    router.refresh()
   }
 
   return (
@@ -52,8 +50,7 @@ export default function OrganizationAdminPage() {
         </div>
         <div className="relative space-y-6 max-w-md">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-foreground text-background text-xs font-medium">
-            <Icons.building className="size-3.5" />
-            HQ Organization Admin
+            <Icons.building className="size-3.5" /> HQ Organization Admin
           </div>
           <h1 className="text-3xl font-bold tracking-tight leading-tight">
             Manage the platform,
@@ -90,28 +87,11 @@ export default function OrganizationAdminPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="email" className="text-xs font-medium">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@vaultsign.io"
-                className="mt-1.5 h-10"
-                required
-                autoFocus
-              />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@vaultsign.io" className="mt-1.5 h-10" required autoFocus />
             </div>
             <div>
               <Label htmlFor="password" className="text-xs font-medium">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="mt-1.5 h-10"
-                required
-              />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="mt-1.5 h-10" required />
             </div>
 
             {error && (
@@ -129,9 +109,7 @@ export default function OrganizationAdminPage() {
 
           <div className="mt-6 pt-6 border-t border-border text-center">
             <span className="text-xs text-muted-foreground">Not an HQ admin? </span>
-            <button onClick={() => router.push("/signup")} className="text-xs font-medium text-foreground hover:underline">
-              Sign up
-            </button>
+            <button onClick={() => router.push("/signup")} className="text-xs font-medium text-foreground hover:underline">Sign up</button>
           </div>
 
           <div className="mt-4 flex items-center justify-center gap-4 text-[11px] text-muted-foreground">
