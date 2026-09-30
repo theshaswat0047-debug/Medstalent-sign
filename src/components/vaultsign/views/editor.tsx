@@ -64,7 +64,7 @@ export function EditorView() {
   const recipients = [
     { name: "Rahul Verma", email: "rahul.verma@acme.example", color: "bg-blue-500" },
     { name: "Sarah Mitchell", email: "sarah.m@acme.example", color: "bg-amber-500" },
-    { name: "Vaultsign Legal", email: "legal@vaultsign.io", color: "bg-emerald-500" },
+    { name: "VaultSign Legal", email: "legal@vaultsign.io", color: "bg-emerald-500" },
   ]
 
   const addField = (type: string) => {
@@ -212,14 +212,14 @@ export function EditorView() {
               <div className="p-10 lg:p-12 text-[10px] leading-relaxed">
                 <div className="text-center mb-6">
                   <div className="text-base font-bold tracking-tight">MASTER SERVICE AGREEMENT</div>
-                  <div className="text-[9px] text-muted-foreground mt-1">Vaultsign, Inc. · Effective Date: September 30, 2026</div>
+                  <div className="text-[9px] text-muted-foreground mt-1">VaultSign, Inc. · Effective Date: September 30, 2026</div>
                 </div>
 
                 <div className="space-y-3 text-[9px]">
                   <p>
                     This Master Service Agreement ("<span className="font-semibold">Agreement</span>") is entered into as of the Effective Date by and between
                     <span className="bg-amber-100/60"> Acme Corporation</span> ("<span className="font-semibold">Client</span>") and
-                    <span className="bg-amber-100/60"> Vaultsign, Inc.</span> ("<span className="font-semibold">Service Provider</span>").
+                    <span className="bg-amber-100/60"> VaultSign, Inc.</span> ("<span className="font-semibold">Service Provider</span>").
                   </p>
 
                   <div className="font-semibold mt-4">1. SERVICES</div>

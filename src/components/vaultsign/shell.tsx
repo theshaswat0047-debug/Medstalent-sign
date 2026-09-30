@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Image from "next/image"
 import { Icons } from "./icons"
+import { BrandMark } from "./brand-mark"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -96,10 +97,7 @@ export function AppShell() {
               className="size-9 w-auto h-9 object-contain"
             />
             <div className="hidden sm:block">
-              <div className="text-[15px] font-semibold tracking-tight leading-none">
-                Vault<span className="text-muted-foreground">Sign</span>
-              </div>
-              <div className="text-[10px] text-muted-foreground mt-1 leading-none tracking-wide">Secure. Sign. Done.</div>
+              <BrandMark size="md" showTagline />
             </div>
           </div>
 
@@ -243,9 +241,7 @@ export function AppShell() {
                     height={28}
                     className="size-7 w-auto h-7 object-contain"
                   />
-                  <span className="font-semibold text-sm">
-                    Vault<span className="text-muted-foreground">Sign</span>
-                  </span>
+                  <BrandMark size="sm" />
                 </div>
                 <Button size="icon" variant="ghost" className="size-8" onClick={() => setSidebarOpen(false)}>
                   <Icons.x className="size-4" />

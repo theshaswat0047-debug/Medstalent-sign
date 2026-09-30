@@ -134,7 +134,7 @@ function BrevoTab({ role }: { role: Role }) {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 max-w-md">
-                Vaultsign uses Brevo to deliver signing invitations, reminders, and completion certificates. Webhooks feed real-time delivery & open events into the tracking dashboard.
+                VaultSign uses Brevo to deliver signing invitations, reminders, and completion certificates. Webhooks feed real-time delivery & open events into the tracking dashboard.
               </p>
             </div>
           </div>
@@ -194,7 +194,7 @@ function BrevoTab({ role }: { role: Role }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Approved sender email" value="sign@notifications.acme-holdings.io" readOnly={role !== "SUPERADMIN"} />
-            <Field label="Sender name" value="Acme Holdings · Vaultsign" readOnly={role !== "SUPERADMIN"} />
+            <Field label="Sender name" value="Acme Holdings · VaultSign" readOnly={role !== "SUPERADMIN"} />
             <Field label="Webhook endpoint" value="https://api.vaultsign.io/webhooks/brevo" readOnly />
             <Field label="Webhook secret" value="whsec_8a4f2c1b9d7e" readOnly={role !== "SUPERADMIN"} />
           </div>
@@ -283,7 +283,7 @@ function ApiKeysTab() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-sm font-semibold">API keys</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Programmatic access to the Vaultsign REST API.</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Programmatic access to the VaultSign REST API.</p>
           </div>
           <Button size="sm" className="h-9 gap-1.5">
             <Icons.plus className="size-4" />
@@ -383,7 +383,7 @@ function IntegrationsTab() {
     <div className="space-y-4">
       <Card className="p-5 shadow-card">
         <h2 className="text-sm font-semibold mb-1">Integrations</h2>
-        <p className="text-xs text-muted-foreground mb-4">Connect Vaultsign to your existing toolchain.</p>
+        <p className="text-xs text-muted-foreground mb-4">Connect VaultSign to your existing toolchain.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {INTEGRATIONS.map((i) => {
             const Icon = Icons[i.icon as keyof typeof Icons] || Icons.plug
@@ -446,7 +446,7 @@ function BrandingTab() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
           <Field label="Custom signing domain" value="sign.acme-holdings.io" prefix="https://" />
-          <Field label="Sender display name" value="Acme Holdings · Vaultsign" />
+          <Field label="Sender display name" value="Acme Holdings · VaultSign" />
         </div>
       </Card>
 
@@ -459,7 +459,7 @@ function BrandingTab() {
               <Icons.shield className="size-3 text-background" />
             </div>
             <span className="text-xs font-medium text-background">Acme Holdings</span>
-            <span className="text-[10px] text-background/60 ml-auto">Secured by Vaultsign</span>
+            <span className="text-[10px] text-background/60 ml-auto">Secured by <span className="font-semibold text-background">Vault</span><span className="font-semibold bg-clip-text text-transparent bg-gradient-to-r from-[#60A5FA] via-[#818CF8] to-[#C084FC]">Sign</span></span>
           </div>
           <div className="p-6">
             <div className="text-sm font-semibold">Review & sign your document</div>
@@ -487,7 +487,7 @@ function SecurityTab() {
     <div className="space-y-4">
       <Card className="p-5 shadow-card">
         <h2 className="text-sm font-semibold mb-1">Authentication</h2>
-        <p className="text-xs text-muted-foreground mb-4">Protect access to your Vaultsign workspace.</p>
+        <p className="text-xs text-muted-foreground mb-4">Protect access to your VaultSign workspace.</p>
         <div className="space-y-2">
           <ToggleRow label="Two-factor authentication (TOTP)" desc="Require time-based OTP at sign-in" on />
           <ToggleRow label="Enforce 2FA for all admins" desc="Org admins must enable 2FA within 7 days" on />
@@ -511,7 +511,7 @@ function SecurityTab() {
 
       <Card className="p-5 shadow-card">
         <h2 className="text-sm font-semibold mb-1">Compliance certifications</h2>
-        <p className="text-xs text-muted-foreground mb-4">Vaultsign is independently audited.</p>
+        <p className="text-xs text-muted-foreground mb-4">VaultSign is independently audited.</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           {[
             { name: "SOC 2 Type II", date: "Aug 2026" },
