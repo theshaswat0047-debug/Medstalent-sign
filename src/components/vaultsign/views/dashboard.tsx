@@ -6,12 +6,15 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { ANALYTICS, DOCUMENTS, RECENT_ACTIVITY } from "@/lib/mock-data"
+import { ANALYTICS, RECENT_ACTIVITY } from "@/lib/mock-data"
+import { useAppStore } from "@/lib/store"
 import type { Role } from "../shell"
 import type { ViewKey } from "../shell"
 
 export function DashboardView({ role, onNavigate }: { role: Role; onNavigate: (v: ViewKey) => void }) {
   const a = ANALYTICS
+  const envelopes = useAppStore((s) => s.envelopes)
+  const selectEnvelope = useAppStore((s) => s.selectEnvelope)
 
   const kpis = [
     { label: "Total envelopes", value: a.totalEnvelopes.toLocaleString(), delta: "+12.4%", trend: "up", icon: "sign" as const },
@@ -134,10 +137,10 @@ export function DashboardView({ role, onNavigate }: { role: Role; onNavigate: (v
             </Button>
           </div>
           <div className="divide-y divide-border">
-            {DOCUMENTS.slice(0, 5).map((d) => (
+            {envelopes.slice(0, 5).map((d) => (
               <button
                 key={d.id}
-                onClick={() => onNavigate("tracking")}
+                onClick={() => { selectEnvelope(d.id); onNavigate("tracking") }}
                 className="w-full flex items-center gap-3 py-2.5 first:pt-0 last:pb-0 hover:bg-accent/40 -mx-2 px-2 rounded-lg transition-colors text-left"
               >
                 <Avatar className="size-9 rounded-md shrink-0">

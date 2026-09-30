@@ -7,7 +7,9 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { TEMPLATES, CATEGORIES, type TemplateCategory } from "@/lib/template-data"
+import { TEMPLATES, CATEGORIES, type TemplateCategory, type TemplateItem } from "@/lib/template-data"
+import { useAppStore } from "@/lib/store"
+import { useToast } from "@/hooks/use-toast"
 
 const CATEGORY_ICON_MAP: Record<string, string> = {
   "HR": "users",
@@ -24,6 +26,16 @@ export function TemplatesView() {
   const [activeCat, setActiveCat] = useState<TemplateCategory | "All">("All")
   const [query, setQuery] = useState("")
   const [sort, setSort] = useState<"popular" | "new" | "az">("popular")
+  const openSendModal = useAppStore((s) => s.openSendModal)
+  const { toast } = useToast()
+
+  const handleUseTemplate = (t: TemplateItem) => {
+    openSendModal({ name: t.name, category: t.category, pages: t.pages })
+    toast({
+      title: `Loaded "${t.name}"`,
+      description: `${t.category} · ${t.pages} pages. Add a recipient to send.`,
+    })
+  }
 
   const filtered = useMemo(() => {
     let list = TEMPLATES
@@ -53,11 +65,14 @@ export function TemplatesView() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-9 gap-1.5">
+          <Button
+            variant="outline" size="sm" className="h-9 gap-1.5"
+            onClick={() => toast({ title: "Import template", description: "Upload .docx or .pdf to create a reusable template." })}
+          >
             <Icons.upload className="size-3.5" />
             Import template
           </Button>
-          <Button size="sm" className="h-9 gap-1.5">
+          <Button size="sm" className="h-9 gap-1.5" onClick={() => openSendModal()}>
             <Icons.plus className="size-4" />
             Create custom
           </Button>
@@ -145,7 +160,7 @@ export function TemplatesView() {
       {/* Template grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {filtered.map((t) => (
-          <TemplateCard key={t.id} template={t} />
+          <TemplateCard key={t.id} template={t} onUse={() => handleUseTemplate(t)} />
         ))}
       </div>
 
@@ -162,11 +177,14 @@ export function TemplatesView() {
   )
 }
 
-function TemplateCard({ template }: { template: (typeof TEMPLATES)[number] }) {
+function TemplateCard({ template, onUse }: { template: (typeof TEMPLATES)[number]; onUse: () => void }) {
   const Icon = Icons[CATEGORY_ICON_MAP[template.category] || "documents"]
 
   return (
-    <Card className="group p-4 shadow-card hover:shadow-card-hover transition-all hover:-translate-y-0.5 cursor-pointer relative">
+    <Card
+      className="group p-4 shadow-card hover:shadow-card-hover transition-all hover:-translate-y-0.5 cursor-pointer relative"
+      onClick={onUse}
+    >
       {/* Thumbnail mock */}
       <div className="aspect-[4/3] rounded-lg bg-secondary/60 border border-border mb-3 relative overflow-hidden flex items-center justify-center">
         {/* Document lines mock */}
@@ -219,7 +237,12 @@ function TemplateCard({ template }: { template: (typeof TEMPLATES)[number] }) {
             {template.popularity}
           </span>
         </div>
-        <Button size="sm" variant="ghost" className="h-7 px-2 text-xs gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-xs gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={(e) => { e.stopPropagation(); onUse() }}
+        >
           Use
           <Icons.arrowRight className="size-3" />
         </Button>

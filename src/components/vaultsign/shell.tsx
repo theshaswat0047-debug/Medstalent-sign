@@ -4,6 +4,8 @@ import { useState } from "react"
 import Image from "next/image"
 import { Icons } from "./icons"
 import { BrandMark } from "./brand-mark"
+import { SendDocumentModal } from "./send-modal"
+import { useAppStore } from "@/lib/store"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -56,6 +58,7 @@ export function AppShell() {
   const [role, setRole] = useState<Role>("SUPERADMIN")
   const [view, setView] = useState<ViewKey>("dashboard")
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const openSendModal = useAppStore((s) => s.openSendModal)
 
   const profile = ROLE_PROFILES[role]
 
@@ -117,11 +120,21 @@ export function AppShell() {
 
           {/* Right actions */}
           <div className="flex items-center gap-1.5">
-            <Button size="sm" className="hidden sm:inline-flex h-9 gap-1.5">
+            <Button
+              size="sm"
+              className="hidden sm:inline-flex h-9 gap-1.5"
+              onClick={() => openSendModal()}
+            >
               <Icons.plus className="size-4" />
               <span>New Document</span>
             </Button>
-            <Button size="icon" variant="ghost" className="sm:hidden h-9 w-9">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="sm:hidden h-9 w-9"
+              onClick={() => openSendModal()}
+              aria-label="New document"
+            >
               <Icons.plus className="size-4" />
             </Button>
 
@@ -224,7 +237,7 @@ export function AppShell() {
       <div className="flex flex-1 min-h-0">
         {/* Sidebar — desktop */}
         <aside className="hidden lg:flex w-60 shrink-0 flex-col border-r border-border bg-card">
-          <SidebarContent role={role} view={view} setView={setView} profile={profile} />
+          <SidebarContent role={role} view={view} setView={setView} profile={profile} openSendModal={openSendModal} />
         </aside>
 
         {/* Sidebar — mobile drawer */}
@@ -247,7 +260,7 @@ export function AppShell() {
                   <Icons.x className="size-4" />
                 </Button>
               </div>
-              <SidebarContent role={role} view={view} setView={(v) => { setView(v); setSidebarOpen(false) }} profile={profile} mobile />
+              <SidebarContent role={role} view={view} setView={(v) => { setView(v); setSidebarOpen(false) }} profile={profile} mobile openSendModal={openSendModal} />
             </aside>
           </div>
         )}
@@ -259,24 +272,28 @@ export function AppShell() {
           </div>
         </main>
       </div>
+
+      {/* Global Send Document modal — opened from topbar, sidebar, templates, documents */}
+      <SendDocumentModal />
     </div>
   )
 }
 
 function SidebarContent({
-  role, view, setView, profile, mobile,
+  role, view, setView, profile, mobile, openSendModal,
 }: {
   role: Role
   view: ViewKey
   setView: (v: ViewKey) => void
   profile: { name: string; avatar: string; orgLabel: string; scope: string }
   mobile?: boolean
+  openSendModal: () => void
 }) {
   return (
     <div className="flex flex-col h-full">
       {/* New document button */}
       <div className="p-3">
-        <Button className="w-full h-9 gap-2 shadow-card">
+        <Button className="w-full h-9 gap-2 shadow-card" onClick={() => openSendModal()}>
           <Icons.plus className="size-4" />
           New Document
         </Button>

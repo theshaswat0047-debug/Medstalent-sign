@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { DOCUMENTS } from "@/lib/mock-data"
+import { useAppStore } from "@/lib/store"
+import { useToast } from "@/hooks/use-toast"
 import { StatusBadge } from "./dashboard"
 
 type Filter = "all" | "in_progress" | "waiting_on_others" | "completed" | "declined" | "expired"
@@ -19,18 +20,22 @@ type Filter = "all" | "in_progress" | "waiting_on_others" | "completed" | "decli
 export function DocumentsView({ onOpenTracking }: { onOpenTracking: () => void }) {
   const [filter, setFilter] = useState<Filter>("all")
   const [query, setQuery] = useState("")
+  const envelopes = useAppStore((s) => s.envelopes)
+  const selectEnvelope = useAppStore((s) => s.selectEnvelope)
+  const openSendModal = useAppStore((s) => s.openSendModal)
+  const { toast } = useToast()
 
   const tabs: { v: Filter; l: string; count: number }[] = [
-    { v: "all", l: "All documents", count: DOCUMENTS.length },
-    { v: "in_progress", l: "In progress", count: DOCUMENTS.filter((d) => ["SENT", "DELIVERED", "VIEWED", "SIGNED", "DRAFT"].includes(d.status)).length },
-    { v: "waiting_on_others", l: "Waiting on others", count: DOCUMENTS.filter((d) => ["SENT", "DELIVERED", "VIEWED"].includes(d.status)).length },
-    { v: "completed", l: "Completed", count: DOCUMENTS.filter((d) => d.status === "COMPLETED").length },
-    { v: "declined", l: "Declined", count: DOCUMENTS.filter((d) => d.status === "DECLINED").length },
-    { v: "expired", l: "Expired", count: DOCUMENTS.filter((d) => d.status === "EXPIRED").length },
+    { v: "all", l: "All documents", count: envelopes.length },
+    { v: "in_progress", l: "In progress", count: envelopes.filter((d) => ["SENT", "DELIVERED", "VIEWED", "SIGNED", "DRAFT"].includes(d.status)).length },
+    { v: "waiting_on_others", l: "Waiting on others", count: envelopes.filter((d) => ["SENT", "DELIVERED", "VIEWED"].includes(d.status)).length },
+    { v: "completed", l: "Completed", count: envelopes.filter((d) => d.status === "COMPLETED").length },
+    { v: "declined", l: "Declined", count: envelopes.filter((d) => d.status === "DECLINED").length },
+    { v: "expired", l: "Expired", count: envelopes.filter((d) => d.status === "EXPIRED").length },
   ]
 
   const filtered = useMemo(() => {
-    let list = DOCUMENTS
+    let list = envelopes
     if (filter === "in_progress") list = list.filter((d) => ["SENT", "DELIVERED", "VIEWED", "SIGNED", "DRAFT"].includes(d.status))
     else if (filter === "waiting_on_others") list = list.filter((d) => ["SENT", "DELIVERED", "VIEWED"].includes(d.status))
     else if (filter === "completed") list = list.filter((d) => d.status === "COMPLETED")
@@ -41,7 +46,7 @@ export function DocumentsView({ onOpenTracking }: { onOpenTracking: () => void }
       list = list.filter((d) => d.name.toLowerCase().includes(q) || d.templateName.toLowerCase().includes(q) || d.owner.toLowerCase().includes(q))
     }
     return list
-  }, [filter, query])
+  }, [envelopes, filter, query])
 
   return (
     <div className="space-y-6">
@@ -52,11 +57,14 @@ export function DocumentsView({ onOpenTracking }: { onOpenTracking: () => void }
           <p className="text-sm text-muted-foreground mt-1">Send, track, and manage every envelope across your team.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-9 gap-1.5">
+          <Button
+            variant="outline" size="sm" className="h-9 gap-1.5"
+            onClick={() => toast({ title: "Upload & sign", description: "Drag a PDF/DOCX here to self-sign without sending." })}
+          >
             <Icons.upload className="size-3.5" />
             Upload & sign
           </Button>
-          <Button size="sm" className="h-9 gap-1.5">
+          <Button size="sm" className="h-9 gap-1.5" onClick={() => openSendModal()}>
             <Icons.plus className="size-4" />
             Send new
           </Button>
@@ -138,7 +146,7 @@ export function DocumentsView({ onOpenTracking }: { onOpenTracking: () => void }
                 <tr
                   key={d.id}
                   className="border-b border-border last:border-0 hover:bg-accent/30 cursor-pointer transition-colors"
-                  onClick={onOpenTracking}
+                  onClick={() => { selectEnvelope(d.id); onOpenTracking() }}
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-start gap-2.5">
@@ -204,7 +212,7 @@ export function DocumentsView({ onOpenTracking }: { onOpenTracking: () => void }
           {filtered.map((d) => (
             <button
               key={d.id}
-              onClick={onOpenTracking}
+              onClick={() => { selectEnvelope(d.id); onOpenTracking() }}
               className="w-full text-left p-4 hover:bg-accent/30 transition-colors"
             >
               <div className="flex items-start gap-3">

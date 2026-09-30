@@ -8,12 +8,52 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
-import { DOCUMENTS, type DocumentItem } from "@/lib/mock-data"
+import { useAppStore } from "@/lib/store"
+import type { DocumentItem } from "@/lib/mock-data"
 import { StatusBadge } from "./dashboard"
 
 export function TrackingView() {
-  const [selectedId, setSelectedId] = useState<string>(DOCUMENTS[0].id)
-  const selected = DOCUMENTS.find((d) => d.id === selectedId)!
+  const envelopes = useAppStore((s) => s.envelopes)
+  const selectedEnvelopeId = useAppStore((s) => s.selectedEnvelopeId)
+  const selectEnvelope = useAppStore((s) => s.selectEnvelope)
+  const [localSelectedId, setLocalSelectedId] = useState<string | null>(null)
+
+  // Derive the effective selected id: prefer local click, then store, then first.
+  // No effect needed — this is pure derivation during render.
+  const effectiveId =
+    localSelectedId && envelopes.some((d) => d.id === localSelectedId)
+      ? localSelectedId
+      : selectedEnvelopeId && envelopes.some((d) => d.id === selectedEnvelopeId)
+        ? selectedEnvelopeId
+        : envelopes[0]?.id ?? null
+
+  const handleSelect = (id: string) => {
+    setLocalSelectedId(id)
+    selectEnvelope(id)
+  }
+
+  const selected = envelopes.find((d) => d.id === effectiveId) ?? envelopes[0]
+
+  // Empty-state guard
+  if (!selected) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Tracking & Audit Trail</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Real-time envelope tracking powered by Brevo webhooks — delivery, opens, views, and signatures.
+          </p>
+        </div>
+        <Card className="p-12 text-center shadow-card">
+          <div className="size-12 mx-auto rounded-xl bg-secondary flex items-center justify-center">
+            <Icons.tracking className="size-5 text-muted-foreground" />
+          </div>
+          <div className="mt-3 text-sm font-medium">No envelopes yet</div>
+          <div className="text-xs text-muted-foreground mt-1">Send your first document to start tracking.</div>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -67,13 +107,13 @@ export function TrackingView() {
             <div className="text-xs font-medium text-muted-foreground">Envelopes with tracking</div>
           </div>
           <div className="flex-1 overflow-y-auto divide-y divide-border">
-            {DOCUMENTS.filter((d) => d.status !== "DRAFT").map((d) => (
+            {envelopes.filter((d) => d.status !== "DRAFT").map((d) => (
               <button
                 key={d.id}
-                onClick={() => setSelectedId(d.id)}
+                onClick={() => handleSelect(d.id)}
                 className={cn(
                   "w-full text-left p-3 hover:bg-accent/40 transition-colors",
-                  selectedId === d.id && "bg-accent/60 border-l-2 border-foreground"
+                  effectiveId === d.id && "bg-accent/60 border-l-2 border-foreground"
                 )}
               >
                 <div className="flex items-start gap-2.5">
