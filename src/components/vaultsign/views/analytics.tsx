@@ -36,7 +36,7 @@ export function AnalyticsView() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: "Completion rate", value: `${a.completionRate}%`, delta: "+3.2%", trend: "up", sub: "1,043 of 1,284" },
-          { label: "Delivery rate", value: `${a.deliveryRate}%`, delta: "+0.4%", trend: "up", sub: "via Brevo" },
+          { label: "Delivery rate", value: `${a.deliveryRate}%`, delta: "+0.4%", trend: "up", sub: "via email" },
           { label: "Email open rate", value: `${a.openRate}%`, delta: "+1.8%", trend: "up", sub: "987 of 1,284" },
           { label: "Avg time to sign", value: `${a.avgTimeToSignHours}h`, delta: "-0.8h", trend: "down", sub: "faster than last period" },
         ].map((k) => (

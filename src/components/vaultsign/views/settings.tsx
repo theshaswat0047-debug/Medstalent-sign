@@ -15,14 +15,14 @@ import {
 import { API_KEYS, INTEGRATIONS } from "@/lib/mock-data"
 import type { Role } from "../shell"
 
-type Tab = "general" | "brevo" | "api_keys" | "integrations" | "branding" | "security" | "billing"
+type Tab = "general" | "email" | "api_keys" | "integrations" | "branding" | "security" | "billing"
 
 export function SettingsView({ role }: { role: Role }) {
-  const [tab, setTab] = useState<Tab>(role === "SUPERADMIN" ? "brevo" : "general")
+  const [tab, setTab] = useState<Tab>(role === "SUPERADMIN" ? "email" : "general")
 
   const tabs: { v: Tab; l: string; icon: string; superadminOnly?: boolean }[] = [
     { v: "general", l: "General", icon: "settings" },
-    { v: "brevo", l: "Brevo (Email)", icon: "mail" },
+    { v: "email", l: "Email Delivery", icon: "mail" },
     { v: "api_keys", l: "API Keys", icon: "key" },
     { v: "integrations", l: "Integrations", icon: "plug" },
     { v: "branding", l: "Branding", icon: "edit" },
@@ -65,7 +65,7 @@ export function SettingsView({ role }: { role: Role }) {
         {/* Content */}
         <div className="min-w-0">
           {tab === "general" && <GeneralTab />}
-          {tab === "brevo" && <BrevoTab role={role} />}
+          {tab === "email" && <EmailDeliveryTab role={role} />}
           {tab === "api_keys" && <ApiKeysTab />}
           {tab === "integrations" && <IntegrationsTab />}
           {tab === "branding" && <BrandingTab />}
@@ -111,8 +111,8 @@ function GeneralTab() {
   )
 }
 
-// ============ Brevo ============
-function BrevoTab({ role }: { role: Role }) {
+// ============ Email Delivery ============
+function EmailDeliveryTab({ role }: { role: Role }) {
   const [showKey, setShowKey] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -127,14 +127,14 @@ function BrevoTab({ role }: { role: Role }) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold">Brevo Transactional Email</h2>
+                <h2 className="text-sm font-semibold">Email Delivery</h2>
                 <Badge className="h-5 text-[10px] gap-1 bg-emerald-500 hover:bg-emerald-500 text-white">
                   <span className="size-1.5 rounded-full bg-white animate-pulse-dot" />
                   Connected
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5 max-w-md">
-                VaultSign uses Brevo to deliver signing invitations, reminders, and completion certificates. Webhooks feed real-time delivery & open events into the tracking dashboard.
+                VaultSign uses your email delivery provider to send signing invitations, reminders, and completion certificates. Delivery & open events flow into the tracking dashboard in real time.
               </p>
             </div>
           </div>
@@ -172,11 +172,11 @@ function BrevoTab({ role }: { role: Role }) {
 
         <div className="space-y-4">
           <div>
-            <Label className="text-xs font-medium">Brevo API key</Label>
+            <Label className="text-xs font-medium">Email API key</Label>
             <div className="relative mt-1.5">
               <Input
                 type={showKey ? "text" : "password"}
-                defaultValue="xkeysib-3f8a9c2e1b7d4f6a8c0e2b9d7f4a1c3e5b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6"
+                defaultValue="vsk_email_a3f8a9c2e1b7d4f6a8c0e2b9d7f4a1c3e5b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6"
                 className="h-10 pr-24 font-mono text-xs"
                 readOnly={role !== "SUPERADMIN"}
               />
@@ -195,7 +195,7 @@ function BrevoTab({ role }: { role: Role }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Approved sender email" value="sign@notifications.acme-holdings.io" readOnly={role !== "SUPERADMIN"} />
             <Field label="Sender name" value="Acme Holdings · VaultSign" readOnly={role !== "SUPERADMIN"} />
-            <Field label="Webhook endpoint" value="https://api.vaultsign.io/webhooks/brevo" readOnly />
+            <Field label="Webhook endpoint" value="https://api.vaultsign.io/webhooks/email" readOnly />
             <Field label="Webhook secret" value="whsec_8a4f2c1b9d7e" readOnly={role !== "SUPERADMIN"} />
           </div>
         </div>
@@ -231,7 +231,7 @@ function BrevoTab({ role }: { role: Role }) {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <code className="text-xs font-mono font-medium">{s.e}</code>
-                  <Badge variant="outline" className="h-4 text-[9px]">Brevo webhook</Badge>
+                  <Badge variant="outline" className="h-4 text-[9px]">email webhook</Badge>
                 </div>
                 <div className="text-[11px] text-muted-foreground mt-0.5">{s.d}</div>
               </div>
@@ -250,7 +250,7 @@ function BrevoTab({ role }: { role: Role }) {
             New template
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground mb-4">HTML templates dispatched through Brevo.</p>
+        <p className="text-xs text-muted-foreground mb-4">HTML templates dispatched through Email service.</p>
         <div className="space-y-2">
           {[
             { name: "Signing invitation", subject: "Action required: {{sender.name}} requested your signature", sent: 1284 },

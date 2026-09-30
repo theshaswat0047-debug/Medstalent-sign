@@ -17,10 +17,10 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://vaultsign-khaki.vercel.app"),
   title: "VaultSign — Secure. Sign. Done.",
   description:
-    "VaultSign is an enterprise-grade e-signature platform. Send, sign, and track documents end-to-end with 100+ templates, an in-built editor, real-time Brevo-powered tracking, and SOC 2 / HIPAA / eIDAS compliance.",
+    "VaultSign is an enterprise-grade e-signature platform. Send, sign, and track documents end-to-end with 100+ templates, an in-built editor, real-time tracking, and SOC 2 / HIPAA / eIDAS compliance.",
   keywords: [
     "VaultSign", "e-signature", "electronic signature", "document signing",
-    "DocuSign alternative", "Dropbox Sign", "Brevo", "enterprise", "audit trail",
+    "DocuSign alternative", "Dropbox Sign", "enterprise", "audit trail",
     "Secure Sign Done",
   ],
   authors: [{ name: "VaultSign" }],
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "VaultSign — Secure. Sign. Done.",
-    description: "Enterprise e-signature platform with real-time Brevo tracking.",
+    description: "Enterprise e-signature platform with real-time tracking.",
     images: ["/vaultsign-brand.png"],
   },
 };

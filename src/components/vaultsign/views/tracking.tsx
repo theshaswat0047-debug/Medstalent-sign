@@ -41,7 +41,7 @@ export function TrackingView() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Tracking & Audit Trail</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Real-time envelope tracking powered by Brevo webhooks — delivery, opens, views, and signatures.
+            Real-time envelope tracking real-time email tracking — delivery, opens, views, and signatures.
           </p>
         </div>
         <Card className="p-12 text-center shadow-card">
@@ -62,13 +62,13 @@ export function TrackingView() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Tracking & Audit Trail</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Real-time envelope tracking powered by Brevo webhooks — delivery, opens, views, and signatures.
+            Real-time envelope tracking real-time email tracking — delivery, opens, views, and signatures.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-2.5 h-9 rounded-lg bg-emerald-50 border border-emerald-200">
             <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse-dot" />
-            <span className="text-xs font-medium text-emerald-700">Brevo webhook live</span>
+            <span className="text-xs font-medium text-emerald-700">Email tracking live</span>
           </div>
           <Button variant="outline" size="sm" className="h-9 gap-1.5">
             <Icons.download className="size-3.5" />
@@ -160,13 +160,13 @@ function TrackingDetail({ doc }: { doc: DocumentItem }) {
               <StatusBadge status={doc.status} />
             </div>
             <div className="text-xs text-muted-foreground">{doc.templateName} · {doc.pageCount} pages · created {new Date(doc.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
-            {doc.brevoMessageId && (
+            {doc.messageId && (
               <div className="flex items-center gap-1.5 mt-2">
                 <Icons.mail className="size-3 text-muted-foreground" />
-                <span className="text-[11px] font-mono text-muted-foreground">{doc.brevoMessageId}</span>
+                <span className="text-[11px] font-mono text-muted-foreground">{doc.messageId}</span>
                 <Badge variant="outline" className="h-4 text-[9px] gap-1">
-                  <span className={cn("size-1 rounded-full", brevoDotColor(doc.brevoStatus))} />
-                  Brevo: {doc.brevoStatus}
+                  <span className={cn("size-1 rounded-full", deliveryDotColor(doc.deliveryStatus))} />
+                  Email: {doc.deliveryStatus}
                 </Badge>
               </div>
             )}
@@ -262,7 +262,7 @@ function TrackingDetail({ doc }: { doc: DocumentItem }) {
                       {ev.type.startsWith("EMAIL_") && (
                         <Badge variant="secondary" className="h-4 text-[9px] gap-0.5">
                           <Icons.mail className="size-2" />
-                          Brevo
+                          Email
                         </Badge>
                       )}
                     </div>
@@ -373,7 +373,7 @@ function eventColor(type: string) {
   }
 }
 
-function brevoDotColor(status?: string) {
+function deliveryDotColor(status?: string) {
   switch (status) {
     case "delivered": return "bg-blue-500"
     case "opened": return "bg-emerald-500"

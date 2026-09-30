@@ -85,7 +85,7 @@ function SendFormBody({
   const handleSend = () => {
     if (!canProceedDetails || !canProceedRecipient) return
     setSending(true)
-    // Simulate Brevo dispatch + processing
+    // Simulate email dispatch + processing
     setTimeout(() => {
       createEnvelope({
         name: name.trim(),
@@ -99,7 +99,7 @@ function SendFormBody({
       setSending(false)
       toast({
         title: "Envelope sent",
-        description: `${name} dispatched to ${recipientEmail} via Brevo. Tracking is live.`,
+        description: `${name} dispatched to ${recipientEmail} via email. Tracking is live.`,
       })
       onClose()
     }, 1100)
@@ -115,7 +115,7 @@ function SendFormBody({
           Send for signature
         </DialogTitle>
         <DialogDescription className="text-xs">
-          Dispatch an envelope to a recipient. Brevo delivers the email; events flow into tracking in real time.
+          Dispatch an envelope to a recipient. The email is delivered to the recipient; events flow into tracking in real time.
         </DialogDescription>
       </DialogHeader>
 
@@ -264,7 +264,7 @@ function SendFormBody({
               <ReviewRow icon="users" label="Recipient" value={recipientName} />
               <ReviewRow icon="mail" label="Email" value={recipientEmail} />
               <ReviewRow icon="shield" label="Authentication" value="Email OTP · 14-day expiry" />
-              <ReviewRow icon="send" label="Delivery" value="Brevo transactional" />
+              <ReviewRow icon="send" label="Delivery" value="Transactional email" />
             </div>
             {message.trim() && (
               <div>
@@ -275,7 +275,7 @@ function SendFormBody({
             <div className="flex items-start gap-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
               <Icons.check className="size-4 text-emerald-600 shrink-0 mt-0.5" />
               <div className="text-[11px] text-emerald-800">
-                On send, Brevo will deliver the email and webhook events (delivered, opened, viewed, signed) will appear in the Tracking timeline automatically.
+                On send, The email will be delivered and webhook events (delivered, opened, viewed, signed) will appear in the Tracking timeline automatically.
               </div>
             </div>
           </>
@@ -316,7 +316,7 @@ function SendFormBody({
               onClick={handleSend}
             >
               {sending ? <Icons.loader className="size-4 animate-spin" /> : <Icons.send className="size-4" />}
-              {sending ? "Dispatching..." : "Send via Brevo"}
+              {sending ? "Dispatching..." : "Send for signature"}
             </Button>
           )}
         </div>

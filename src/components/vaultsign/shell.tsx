@@ -214,7 +214,7 @@ export function AppShell() {
                   {[
                     { t: "Karthik Rao signed Offer Letter", s: "5 min ago", c: "text-emerald-600" },
                     { t: "Rahul Verma viewed Q4 Vendor MSA", s: "18 min ago", c: "text-foreground" },
-                    { t: "Brevo delivered Lease — 4BHK Indiranagar", s: "3 hr ago", c: "text-muted-foreground" },
+                    { t: "Email delivered Lease — 4BHK Indiranagar", s: "3 hr ago", c: "text-muted-foreground" },
                     { t: "Globex AP declined Q3 Invoice", s: "Yesterday", c: "text-rose-600" },
                   ].map((n, i) => (
                     <div key={i} className="px-4 py-2.5 hover:bg-accent/60 cursor-pointer border-b border-border/60 last:border-0">
@@ -404,12 +404,12 @@ function SidebarContent({
           )
         })}
 
-        {/* Status pill — Brevo health */}
+        {/* Status pill — email health */}
         <div className="px-2 pt-4 pb-2 text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Integrations</div>
         <div className="px-2 py-2 mx-1 rounded-lg bg-secondary/60 border border-border">
           <div className="flex items-center gap-2">
             <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse-dot" />
-            <span className="text-xs font-medium">Brevo connected</span>
+            <span className="text-xs font-medium">Email delivery active</span>
           </div>
           <div className="text-[10px] text-muted-foreground mt-0.5">Delivery · Tracking · Webhooks</div>
           <div className="mt-2 flex items-center gap-1">

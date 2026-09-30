@@ -21,7 +21,7 @@ const ORGANIZATIONS = [
 
 const PLANS = [
   { name: "Starter", price: 0, orgs: 2, seats: "3 seats", envelopes: "50/mo", features: ["Email support", "Basic templates", "1 user"] },
-  { name: "Business", price: 80, orgs: 8, seats: "15 seats", envelopes: "Unlimited", features: ["Brevo integration", "SSO/SAML", "API access", "Priority support"] },
+  { name: "Business", price: 80, orgs: 8, seats: "15 seats", envelopes: "Unlimited", features: ["Email integration", "SSO/SAML", "API access", "Priority support"] },
   { name: "Enterprise", price: 2400, orgs: 3, seats: "25+ seats", envelopes: "Unlimited", features: ["Custom branding", "Dedicated CSM", "White-label", "Audit exports", "99.9% SLA"] },
 ]
 
