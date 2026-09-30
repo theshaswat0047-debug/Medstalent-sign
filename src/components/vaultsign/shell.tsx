@@ -152,19 +152,16 @@ export function AppShell() {
             <Icons.menu className="size-5" />
           </Button>
 
-          {/* Logo + brand */}
+          {/* Logo */}
           <div className="flex items-center gap-2.5">
             <Image
               src="/vaultsign-logo.png"
               alt="VaultSign"
-              width={36}
-              height={36}
+              width={88}
+              height={40}
               priority
-              className="size-9 h-9 w-auto object-contain"
+              className="h-8 w-auto object-contain"
             />
-            <div className="hidden sm:block">
-              <BrandMark size="md" showTagline />
-            </div>
           </div>
 
           {/* Global search */}
@@ -301,11 +298,10 @@ export function AppShell() {
                   <Image
                     src="/vaultsign-logo.png"
                     alt="VaultSign"
-                    width={28}
-                    height={28}
-                    className="size-7 h-7 w-auto object-contain"
+                    width={80}
+                    height={36}
+                    className="h-7 w-auto object-contain"
                   />
-                  <BrandMark size="sm" />
                 </div>
                 <Button size="icon" variant="ghost" className="size-8" onClick={() => setSidebarOpen(false)}>
                   <Icons.x className="size-4" />

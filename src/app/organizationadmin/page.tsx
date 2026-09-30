@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Icons } from "@/components/vaultsign/icons"
-import { BrandMark } from "@/components/vaultsign/brand-mark"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -49,8 +48,7 @@ export default function OrganizationAdminPage() {
       <div className="hidden lg:flex lg:flex-1 flex-col justify-between p-12 bg-secondary/40 border-r border-border relative overflow-hidden">
         <div className="absolute inset-0 bg-dotted opacity-40" />
         <div className="relative flex items-center gap-3">
-          <Image src="/vaultsign-logo.png" alt="VaultSign" width={48} height={48} className="size-12 h-12 w-auto object-contain" />
-          <BrandMark size="lg" showTagline />
+          <Image src="/vaultsign-logo.png" alt="VaultSign" width={120} height={55} className="h-12 w-auto object-contain" />
         </div>
         <div className="relative space-y-6 max-w-md">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-foreground text-background text-xs font-medium">
@@ -76,8 +74,7 @@ export default function OrganizationAdminPage() {
       <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
         <div className="w-full max-w-sm">
           <div className="lg:hidden flex items-center gap-2.5 mb-8">
-            <Image src="/vaultsign-logo.png" alt="VaultSign" width={36} height={36} className="size-9 h-9 w-auto object-contain" />
-            <BrandMark size="md" showTagline />
+            <Image src="/vaultsign-logo.png" alt="VaultSign" width={96} height={44} className="h-9 w-auto object-contain" />
           </div>
 
           <div className="mb-6">
