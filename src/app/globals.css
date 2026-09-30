@@ -45,22 +45,22 @@
 
 :root {
   /* Vaultsign design system — Z.ai inspired
-     Background: offwhite cream / Cards: pure white / Text: near black
+     Background: warm offwhite cream / Cards: pure white / Text: near black
      Accent: monochrome black for primary actions */
   --radius: 0.75rem;
-  --background: oklch(0.97 0.004 90);          /* #FAFAF7 offwhite cream */
-  --foreground: oklch(0.18 0.004 90);          /* #1A1A1A near black */
-  --card: oklch(1 0 0);                        /* #FFFFFF pure white */
+  --background: oklch(0.93 0.008 85);            /* #F2EDE4 warm cream — clearly not white */
+  --foreground: oklch(0.18 0.004 90);            /* #1A1A1A near black */
+  --card: oklch(1 0 0);                          /* #FFFFFF pure white */
   --card-foreground: oklch(0.18 0.004 90);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.004 90);
-  --primary: oklch(0.18 0.004 90);             /* #1A1A1A black */
+  --primary: oklch(0.18 0.004 90);               /* #1A1A1A black */
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.95 0.003 90);           /* light cream-gray */
+  --secondary: oklch(0.96 0.005 85);             /* lighter cream for subtle surfaces */
   --secondary-foreground: oklch(0.18 0.004 90);
-  --muted: oklch(0.94 0.003 90);
-  --muted-foreground: oklch(0.5 0.004 90);     /* #6B6B6B medium gray */
-  --accent: oklch(0.93 0.003 90);
+  --muted: oklch(0.95 0.004 85);
+  --muted-foreground: oklch(0.5 0.004 90);       /* #6B6B6B medium gray */
+  --accent: oklch(0.94 0.004 85);
   --accent-foreground: oklch(0.18 0.004 90);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.9 0.003 90);               /* #E5E5E2 subtle border */
