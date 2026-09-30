@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://vaultsign-khaki.vercel.app"),
   title: "VaultSign — Secure. Sign. Done.",
   description:
     "VaultSign is an enterprise-grade e-signature platform. Send, sign, and track documents end-to-end with 100+ templates, an in-built editor, real-time Brevo-powered tracking, and SOC 2 / HIPAA / eIDAS compliance.",
