@@ -23,28 +23,42 @@ import { TrackingView } from "./views/tracking"
 import { AnalyticsView } from "./views/analytics"
 import { SettingsView } from "./views/settings"
 import { TeamView } from "./views/team"
+import { PlatformOrganizationsView } from "./views/platform-organizations"
+import { PlatformSettingsView } from "./views/platform-settings"
 
 export type Role = "SUPERADMIN" | "ORG_ADMIN" | "MANAGER" | "USER"
 export type ViewKey =
   | "dashboard" | "templates" | "documents" | "editor"
   | "tracking" | "analytics" | "team" | "settings"
+  | "platform_organizations" | "platform_settings"
 
 interface NavItem {
   key: ViewKey
   label: string
   icon: string
-  superadminOnly?: boolean
+  /** Which roles can see this nav item. Empty = all roles. */
+  roles?: Role[]
+  /** Section label in the sidebar */
+  section: "workspace" | "platform" | "admin"
 }
 
+// Role-aware nav. Each role sees a different set of views.
 const NAV_ITEMS: NavItem[] = [
-  { key: "dashboard", label: "Dashboard", icon: "dashboard" },
-  { key: "templates", label: "Templates", icon: "documents" },
-  { key: "documents", label: "Documents", icon: "sign" },
-  { key: "editor", label: "Editor", icon: "editor" },
-  { key: "tracking", label: "Tracking", icon: "tracking" },
-  { key: "analytics", label: "Analytics", icon: "analytics" },
-  { key: "team", label: "Team", icon: "team" },
-  { key: "settings", label: "Settings", icon: "settings" },
+  // Workspace — everyone
+  { key: "dashboard", label: "Dashboard", icon: "dashboard", section: "workspace" },
+  { key: "templates", label: "Templates", icon: "documents", section: "workspace" },
+  { key: "documents", label: "Documents", icon: "sign", section: "workspace" },
+  { key: "editor", label: "Editor", icon: "editor", section: "workspace", roles: ["SUPERADMIN", "ORG_ADMIN", "MANAGER", "USER"] },
+  { key: "tracking", label: "Tracking", icon: "tracking", section: "workspace" },
+  { key: "analytics", label: "Analytics", icon: "analytics", section: "workspace", roles: ["SUPERADMIN", "ORG_ADMIN", "MANAGER"] },
+
+  // Org admin — manage their organization
+  { key: "team", label: "Team", icon: "team", section: "admin", roles: ["SUPERADMIN", "ORG_ADMIN", "MANAGER"] },
+  { key: "settings", label: "Settings", icon: "settings", section: "admin", roles: ["ORG_ADMIN"] },
+
+  // Platform — superadmin only
+  { key: "platform_organizations", label: "Organizations", icon: "building", section: "platform", roles: ["SUPERADMIN"] },
+  { key: "platform_settings", label: "Platform Settings", icon: "shield", section: "platform", roles: ["SUPERADMIN"] },
 ]
 
 const ROLE_PROFILES: Record<Role, { name: string; email: string; avatar: string; orgLabel: string; scope: string }> = {
@@ -54,24 +68,55 @@ const ROLE_PROFILES: Record<Role, { name: string; email: string; avatar: string;
   USER:       { name: "Vikram Shah", email: "vikram.s@vaultsign.io", avatar: "VS", orgLabel: "Acme · Sales", scope: "Standard user" },
 }
 
+// Helper: nav items visible to a given role
+function navForRole(role: Role): NavItem[] {
+  return NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role))
+}
+
+// Helper: when switching roles, land on a sensible default view
+function defaultViewForRole(role: Role): ViewKey {
+  if (role === "SUPERADMIN") return "platform_organizations"
+  if (role === "ORG_ADMIN") return "dashboard"
+  if (role === "MANAGER") return "dashboard"
+  return "dashboard"
+}
+
 export function AppShell() {
   const [role, setRole] = useState<Role>("SUPERADMIN")
-  const [view, setView] = useState<ViewKey>("dashboard")
+  const [view, setView] = useState<ViewKey>("platform_organizations")
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const openSendModal = useAppStore((s) => s.openSendModal)
 
   const profile = ROLE_PROFILES[role]
+  const visibleNav = navForRole(role)
+
+  // If the current view isn't available to the current role, fall back.
+  const effectiveView: ViewKey = visibleNav.some((n) => n.key === view) ? view : defaultViewForRole(role)
+
+  const handleSetRole = (r: Role) => {
+    setRole(r)
+    setView(defaultViewForRole(r))
+  }
+
+  const handleSetView = (v: ViewKey) => {
+    // Guard: only allow views the role can access
+    if (visibleNav.some((n) => n.key === v)) {
+      setView(v)
+    }
+  }
 
   const renderView = () => {
-    switch (view) {
-      case "dashboard":  return <DashboardView role={role} onNavigate={setView} />
+    switch (effectiveView) {
+      case "dashboard":  return <DashboardView role={role} onNavigate={handleSetView} />
       case "templates":  return <TemplatesView />
-      case "documents":  return <DocumentsView onOpenTracking={() => setView("tracking")} />
+      case "documents":  return <DocumentsView onOpenTracking={() => handleSetView("tracking")} />
       case "editor":      return <EditorView />
       case "tracking":   return <TrackingView />
       case "analytics":   return <AnalyticsView />
       case "team":        return <TeamView />
       case "settings":    return <SettingsView role={role} />
+      case "platform_organizations": return <PlatformOrganizationsView />
+      case "platform_settings":       return <PlatformSettingsView />
     }
   }
 
@@ -97,7 +142,7 @@ export function AppShell() {
               width={36}
               height={36}
               priority
-              className="size-9 w-auto h-9 object-contain"
+              className="size-9 h-9 w-auto object-contain"
             />
             <div className="hidden sm:block">
               <BrandMark size="md" showTagline />
@@ -195,7 +240,7 @@ export function AppShell() {
                   return (
                     <DropdownMenuItem
                       key={r}
-                      onClick={() => setRole(r)}
+                      onClick={() => handleSetRole(r)}
                       className={cn("flex items-start gap-2.5 px-3 py-2.5 cursor-pointer", role === r && "bg-accent/60")}
                     >
                       <Avatar className="size-8 rounded-md mt-0.5">
@@ -237,7 +282,7 @@ export function AppShell() {
       <div className="flex flex-1 min-h-0">
         {/* Sidebar — desktop */}
         <aside className="hidden lg:flex w-60 shrink-0 flex-col border-r border-border bg-card">
-          <SidebarContent role={role} view={view} setView={setView} profile={profile} openSendModal={openSendModal} />
+          <SidebarContent role={role} view={effectiveView} setView={handleSetView} profile={profile} openSendModal={openSendModal} />
         </aside>
 
         {/* Sidebar — mobile drawer */}
@@ -252,7 +297,7 @@ export function AppShell() {
                     alt="VaultSign"
                     width={28}
                     height={28}
-                    className="size-7 w-auto h-7 object-contain"
+                    className="size-7 h-7 w-auto object-contain"
                   />
                   <BrandMark size="sm" />
                 </div>
@@ -260,7 +305,7 @@ export function AppShell() {
                   <Icons.x className="size-4" />
                 </Button>
               </div>
-              <SidebarContent role={role} view={view} setView={(v) => { setView(v); setSidebarOpen(false) }} profile={profile} mobile openSendModal={openSendModal} />
+              <SidebarContent role={role} view={effectiveView} setView={(v) => { handleSetView(v); setSidebarOpen(false) }} profile={profile} mobile openSendModal={openSendModal} />
             </aside>
           </div>
         )}
@@ -289,46 +334,71 @@ function SidebarContent({
   mobile?: boolean
   openSendModal: () => void
 }) {
+  const visibleNav = navForRole(role)
+  const sections: { key: NavItem["section"]; label: string }[] = [
+    { key: "workspace", label: "Workspace" },
+    { key: "admin", label: role === "SUPERADMIN" ? "Administration" : "Manage org" },
+    { key: "platform", label: "Platform" },
+  ]
+
   return (
     <div className="flex flex-col h-full">
-      {/* New document button */}
-      <div className="p-3">
-        <Button className="w-full h-9 gap-2 shadow-card" onClick={() => openSendModal()}>
-          <Icons.plus className="size-4" />
-          New Document
-        </Button>
-      </div>
+      {/* New document button — hidden for superadmin (they don't send docs) */}
+      {role !== "SUPERADMIN" && (
+        <div className="p-3">
+          <Button className="w-full h-9 gap-2 shadow-card" onClick={() => openSendModal()}>
+            <Icons.plus className="size-4" />
+            New Document
+          </Button>
+        </div>
+      )}
+      {role === "SUPERADMIN" && (
+        <div className="p-3">
+          <div className="px-3 py-2.5 rounded-lg bg-secondary/60 border border-border flex items-center gap-2">
+            <div className="size-7 rounded-md bg-foreground flex items-center justify-center">
+              <Icons.shield className="size-3.5 text-background" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-semibold">Superadmin mode</div>
+              <div className="text-[10px] text-muted-foreground">Platform-wide access</div>
+            </div>
+          </div>
+        </div>
+      )}
 
-      {/* Nav */}
+      {/* Nav — grouped by section, filtered by role */}
       <nav className="flex-1 px-2 pb-2 overflow-y-auto">
-        <div className="px-2 py-2 text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Workspace</div>
-        {NAV_ITEMS.map((item) => {
-          const Icon = Icons[item.icon]
-          const active = view === item.key
+        {sections.map((section) => {
+          const items = visibleNav.filter((n) => n.section === section.key)
+          if (items.length === 0) return null
           return (
-            <button
-              key={item.key}
-              onClick={() => setView(item.key)}
-              className={cn(
-                "w-full flex items-center gap-2.5 px-2.5 h-9 rounded-lg text-sm transition-colors mb-0.5",
-                active
-                  ? "bg-foreground text-background font-medium"
-                  : "text-foreground/70 hover:bg-accent/60 hover:text-foreground"
-              )}
-            >
-              <Icon className="size-4 shrink-0" />
-              <span className="truncate">{item.label}</span>
-              {item.key === "tracking" && (
-                <Badge variant="secondary" className="ml-auto h-5 px-1.5 text-[10px] bg-background/20 text-background">
-                  3
-                </Badge>
-              )}
-              {active && !mobile && (
-                <span className="ml-auto lg:hidden">
-                  <Icons.chevronRight className="size-3.5" />
-                </span>
-              )}
-            </button>
+            <div key={section.key}>
+              <div className="px-2 py-2 text-[11px] uppercase tracking-wide text-muted-foreground font-medium">{section.label}</div>
+              {items.map((item) => {
+                const Icon = Icons[item.icon]
+                const active = view === item.key
+                return (
+                  <button
+                    key={`${item.section}-${item.key}`}
+                    onClick={() => setView(item.key)}
+                    className={cn(
+                      "w-full flex items-center gap-2.5 px-2.5 h-9 rounded-lg text-sm transition-colors mb-0.5",
+                      active
+                        ? "bg-foreground text-background font-medium"
+                        : "text-foreground/70 hover:bg-accent/60 hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0" />
+                    <span className="truncate">{item.label}</span>
+                    {item.key === "tracking" && (
+                      <Badge variant="secondary" className={cn("ml-auto h-5 px-1.5 text-[10px]", active ? "bg-background/20 text-background" : "")}>
+                        3
+                      </Badge>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           )
         })}
 
