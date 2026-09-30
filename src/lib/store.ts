@@ -4,11 +4,46 @@
 
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { DOCUMENTS } from "./mock-data"
-import type { DocumentItem } from "./mock-data"
+
+export interface DocumentItem {
+  id: string
+  name: string
+  templateName: string
+  category: string
+  status: "DRAFT" | "SENT" | "DELIVERED" | "VIEWED" | "SIGNED" | "COMPLETED" | "DECLINED" | "EXPIRED" | "VOIDED"
+  owner: string
+  ownerAvatar: string
+  createdAt: string
+  updatedAt: string
+  expiresAt: string
+  pageCount: number
+  progress: number
+  messageId?: string
+  deliveryStatus?: "delivered" | "opened" | "clicked" | "bounced" | "blocked" | "queued"
+  recipients: Array<{
+    name: string
+    email: string
+    role: "SIGNER" | "CC" | "APPROVER" | "VIEWER"
+    status: "PENDING" | "SENT" | "DELIVERED" | "VIEWED" | "SIGNED" | "DECLINED" | "BOUNCED"
+    viewedAt?: string
+    signedAt?: string
+    ipAddress?: string
+    geolocation?: string
+    device?: string
+  }>
+  events: Array<{
+    id: string
+    type: string
+    label: string
+    description: string
+    timestamp: string
+    actor: string
+    meta?: Record<string, string>
+  }>
+}
 
 interface AppState {
-  // All envelopes = seeded mock docs + user-created ones
+  // All envelopes — starts EMPTY, user-created ones added at runtime
   envelopes: DocumentItem[]
   // The currently-selected envelope id (for Tracking detail)
   selectedEnvelopeId: string | null
@@ -39,9 +74,9 @@ function genId() {
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      // Start with the seeded mock documents
-      envelopes: DOCUMENTS,
-      selectedEnvelopeId: DOCUMENTS[0]?.id ?? null,
+      // Start with empty list — no mock data
+      envelopes: [],
+      selectedEnvelopeId: null,
       sendModalOpen: false,
       sendModalTemplate: null,
 

@@ -12,32 +12,32 @@ import { Switch } from "@/components/ui/switch"
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { API_KEYS, INTEGRATIONS } from "@/lib/mock-data"
 import type { Role } from "../shell"
 
-type Tab = "general" | "email" | "api_keys" | "integrations" | "branding" | "security" | "billing"
+type Tab = "general" | "api_keys" | "integrations" | "branding" | "security" | "billing"
 
 export function SettingsView({ role }: { role: Role }) {
-  const [tab, setTab] = useState<Tab>(role === "SUPERADMIN" ? "email" : "general")
+  // Customers land on "general", no Brevo tab for them
+  const [tab, setTab] = useState<Tab>("general")
 
-  const tabs: { v: Tab; l: string; icon: string; superadminOnly?: boolean }[] = [
-    { v: "general", l: "General", icon: "settings" },
-    { v: "email", l: "Email Delivery", icon: "mail" },
-    { v: "api_keys", l: "API Keys", icon: "key" },
-    { v: "integrations", l: "Integrations", icon: "plug" },
-    { v: "branding", l: "Branding", icon: "edit" },
-    { v: "security", l: "Security", icon: "shield" },
-    { v: "billing", l: "Billing", icon: "card" },
+  // Role-based tabs — NO email/Brevo for customers (that's platform-only)
+  const allTabs: { v: Tab; l: string; icon: string; roles: Role[] }[] = [
+    { v: "general", l: "General", icon: "settings", roles: ["ORG_OWNER", "PERSONAL_USER"] },
+    { v: "api_keys", l: "API Keys", icon: "key", roles: ["ORG_OWNER"] },
+    { v: "integrations", l: "Integrations", icon: "plug", roles: ["ORG_OWNER"] },
+    { v: "branding", l: "Branding", icon: "edit", roles: ["ORG_OWNER"] },
+    { v: "security", l: "Security", icon: "shield", roles: ["ORG_OWNER", "PERSONAL_USER"] },
+    { v: "billing", l: "Billing", icon: "card", roles: ["ORG_OWNER"] },
   ]
+
+  const tabs = allTabs.filter((t) => t.roles.includes(role))
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          {role === "SUPERADMIN"
-            ? "Platform-wide configuration — manage integrations, API keys, and billing for all tenants."
-            : "Manage your organization's integrations, branding, and security."}
+          Manage your organization's API keys, integrations, branding, and security.
         </p>
       </div>
 
@@ -65,7 +65,6 @@ export function SettingsView({ role }: { role: Role }) {
         {/* Content */}
         <div className="min-w-0">
           {tab === "general" && <GeneralTab />}
-          {tab === "email" && <EmailDeliveryTab role={role} />}
           {tab === "api_keys" && <ApiKeysTab />}
           {tab === "integrations" && <IntegrationsTab />}
           {tab === "branding" && <BrandingTab />}
@@ -111,170 +110,6 @@ function GeneralTab() {
   )
 }
 
-// ============ Email Delivery ============
-function EmailDeliveryTab({ role }: { role: Role }) {
-  const [showKey, setShowKey] = useState(false)
-  const [saved, setSaved] = useState(false)
-
-  return (
-    <div className="space-y-4">
-      {/* Hero status card */}
-      <Card className="p-5 shadow-card">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="size-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-              <Icons.mail className="size-5 text-emerald-600" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold">Email Delivery</h2>
-                <Badge className="h-5 text-[10px] gap-1 bg-emerald-500 hover:bg-emerald-500 text-white">
-                  <span className="size-1.5 rounded-full bg-white animate-pulse-dot" />
-                  Connected
-                </Badge>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5 max-w-md">
-                VaultSign uses your email delivery provider to send signing invitations, reminders, and completion certificates. Delivery & open events flow into the tracking dashboard in real time.
-              </p>
-            </div>
-          </div>
-          <Button variant="outline" size="sm" className="h-9 gap-1.5 shrink-0">
-            <Icons.refresh className="size-3.5" />
-            Test webhook
-          </Button>
-        </div>
-
-        {/* Live metrics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
-          {[
-            { l: "Emails sent (24h)", v: "342" },
-            { l: "Delivery rate", v: "99.4%" },
-            { l: "Open rate", v: "76.8%" },
-            { l: "Bounce rate", v: "0.6%" },
-          ].map((m) => (
-            <div key={m.l} className="p-3 rounded-lg bg-secondary/50">
-              <div className="text-lg font-semibold tabular-nums">{m.v}</div>
-              <div className="text-[10px] text-muted-foreground">{m.l}</div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* API key configuration */}
-      <Card className="p-5 shadow-card">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm font-semibold">API credentials</h2>
-          {role === "SUPERADMIN" && <Badge variant="outline" className="h-5 text-[10px] gap-1"><Icons.shield className="size-2.5" />Superadmin</Badge>}
-        </div>
-        <p className="text-xs text-muted-foreground mb-4">
-          Stored encrypted at rest (AES-256). Masked after saving. {role !== "SUPERADMIN" && "Only superadmins can edit these."}
-        </p>
-
-        <div className="space-y-4">
-          <div>
-            <Label className="text-xs font-medium">Email API key</Label>
-            <div className="relative mt-1.5">
-              <Input
-                type={showKey ? "text" : "password"}
-                defaultValue="vsk_email_a3f8a9c2e1b7d4f6a8c0e2b9d7f4a1c3e5b8d0f2a4c6e8b0d2f4a6c8e0b2d4f6"
-                className="h-10 pr-24 font-mono text-xs"
-                readOnly={role !== "SUPERADMIN"}
-              />
-              <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setShowKey((s) => !s)}>
-                  {showKey ? <Icons.eye className="size-3.5" /> : <Icons.eye className="size-3.5" />}
-                  {showKey ? "Hide" : "Reveal"}
-                </Button>
-                <Button size="sm" variant="ghost" className="h-7 px-2 text-xs">
-                  <Icons.copy className="size-3.5" />
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Approved sender email" value="sign@notifications.acme-holdings.io" readOnly={role !== "SUPERADMIN"} />
-            <Field label="Sender name" value="Acme Holdings · VaultSign" readOnly={role !== "SUPERADMIN"} />
-            <Field label="Webhook endpoint" value="https://api.vaultsign.io/webhooks/email" readOnly />
-            <Field label="Webhook secret" value="whsec_8a4f2c1b9d7e" readOnly={role !== "SUPERADMIN"} />
-          </div>
-        </div>
-
-        {role === "SUPERADMIN" && (
-          <div className="flex items-center justify-end gap-2 mt-5">
-            <Button variant="ghost" size="sm" className="h-9">Cancel</Button>
-            <Button size="sm" className="h-9 gap-1.5" onClick={() => setSaved(true)}>
-              <Icons.check2 className="size-3.5" />
-              {saved ? "Saved · webhook verified" : "Save & verify"}
-            </Button>
-          </div>
-        )}
-      </Card>
-
-      {/* Webhook event subscriptions */}
-      <Card className="p-5 shadow-card">
-        <h2 className="text-sm font-semibold mb-1">Webhook event subscriptions</h2>
-        <p className="text-xs text-muted-foreground mb-4">Each event creates an entry in the tracking timeline.</p>
-        <div className="space-y-2">
-          {[
-            { e: "delivered", d: "Email delivered to recipient inbox", on: true },
-            { e: "opened", d: "Recipient opened the email (tracking pixel)", on: true },
-            { e: "clicked", d: "Recipient clicked a link in the email", on: true },
-            { e: "soft_bounced", d: "Soft bounce — will retry", on: true },
-            { e: "hard_bounced", d: "Hard bounce — permanently failed", on: true },
-            { e: "blocked", d: "Email blocked by recipient server", on: true },
-            { e: "spam", d: "Recipient marked as spam", on: true },
-            { e: "invalid_email", d: "Recipient email address invalid", on: true },
-            { e: "deferred", d: "Delivery deferred by recipient server", on: false },
-          ].map((s) => (
-            <div key={s.e} className="flex items-center justify-between p-2.5 rounded-lg hover:bg-accent/40">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <code className="text-xs font-mono font-medium">{s.e}</code>
-                  <Badge variant="outline" className="h-4 text-[9px]">email webhook</Badge>
-                </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">{s.d}</div>
-              </div>
-              <Switch defaultChecked={s.on} />
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {/* Email templates */}
-      <Card className="p-5 shadow-card">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="text-sm font-semibold">Email templates</h2>
-          <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
-            <Icons.plus className="size-3" />
-            New template
-          </Button>
-        </div>
-        <p className="text-xs text-muted-foreground mb-4">HTML templates dispatched through Email service.</p>
-        <div className="space-y-2">
-          {[
-            { name: "Signing invitation", subject: "Action required: {{sender.name}} requested your signature", sent: 1284 },
-            { name: "Reminder — 3 days", subject: "Reminder: {{document.name}} awaits your signature", sent: 312 },
-            { name: "Reminder — 7 days", subject: "Final reminder: {{document.name}} expires soon", sent: 87 },
-            { name: "Completed certificate", subject: "{{document.name}} — signed and complete", sent: 1043 },
-            { name: "Declined notification", subject: "{{recipient.name}} declined {{document.name}}", sent: 38 },
-          ].map((t) => (
-            <div key={t.name} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/40 hover:bg-accent/60 transition-colors cursor-pointer">
-              <Icons.mail className="size-4 text-muted-foreground shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">{t.name}</div>
-                <div className="text-[11px] text-muted-foreground truncate font-mono">{t.subject}</div>
-              </div>
-              <Badge variant="secondary" className="h-5 text-[10px] tabular-nums">{t.sent.toLocaleString()} sent</Badge>
-              <Button size="icon" variant="ghost" className="size-7"><Icons.edit className="size-3.5" /></Button>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  )
-}
-
 // ============ API Keys ============
 function ApiKeysTab() {
   return (
@@ -291,40 +126,14 @@ function ApiKeysTab() {
           </Button>
         </div>
         <div className="space-y-2">
-          {API_KEYS.map((k) => (
-            <div key={k.id} className="p-3.5 rounded-lg border border-border bg-card">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{k.name}</span>
-                    <Badge variant="outline" className="h-5 text-[10px] font-mono">{k.prefix}…••••••</Badge>
-                  </div>
-                  <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                    {k.scopes.map((s) => (
-                      <code key={s} className="text-[10px] font-mono text-muted-foreground bg-secondary px-1.5 py-0.5 rounded">{s}</code>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground">
-                    <span>Created {k.created}</span>
-                    <span>·</span>
-                    <span>Last used {k.lastUsed}</span>
-                    <span>·</span>
-                    <span>{k.rateLimit}/min rate limit</span>
-                  </div>
-                </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button size="icon" variant="ghost" className="size-7"><Icons.more className="size-3.5" /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44">
-                    <DropdownMenuItem className="text-xs h-8 cursor-pointer"><Icons.copy className="size-3.5 mr-2" /> Copy full key</DropdownMenuItem>
-                    <DropdownMenuItem className="text-xs h-8 cursor-pointer"><Icons.refresh className="size-3.5 mr-2" /> Rotate</DropdownMenuItem>
-                    <DropdownMenuItem className="text-xs h-8 cursor-pointer text-rose-600"><Icons.trash className="size-3.5 mr-2" /> Revoke</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+          {/* API keys are managed via the real API — show empty state for new orgs */}
+          <div className="p-6 rounded-lg border border-dashed border-border text-center">
+            <div className="size-10 mx-auto rounded-lg bg-secondary flex items-center justify-center mb-2">
+              <Icons.key className="size-4 text-muted-foreground" />
             </div>
-          ))}
+            <div className="text-sm font-medium">No API keys yet</div>
+            <div className="text-xs text-muted-foreground mt-1">Generate an API key to access the VaultSign REST API programmatically.</div>
+          </div>
         </div>
       </Card>
 
@@ -384,36 +193,18 @@ function IntegrationsTab() {
       <Card className="p-5 shadow-card">
         <h2 className="text-sm font-semibold mb-1">Integrations</h2>
         <p className="text-xs text-muted-foreground mb-4">Connect VaultSign to your existing toolchain.</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {INTEGRATIONS.map((i) => {
-            const Icon = Icons[i.icon as keyof typeof Icons] || Icons.plug
-            return (
-              <div key={i.id} className="p-4 rounded-lg border border-border bg-card hover:shadow-card transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div className="size-10 rounded-lg bg-secondary flex items-center justify-center">
-                    <Icon className="size-5 text-foreground" />
-                  </div>
-                  {i.connected ? (
-                    <Badge className="h-5 text-[10px] gap-1 bg-emerald-500 hover:bg-emerald-500 text-white">
-                      <span className="size-1.5 rounded-full bg-white" /> Connected
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="h-5 text-[10px]">Not connected</Badge>
-                  )}
-                </div>
-                <div className="mt-3">
-                  <div className="text-sm font-semibold">{i.name}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5 leading-snug">{i.description}</div>
-                </div>
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
-                  <span className="text-[10px] text-muted-foreground">Last sync: {i.lastSync}</span>
-                  <Button size="sm" variant={i.connected ? "outline" : "default"} className="h-7 text-xs">
-                    {i.connected ? "Configure" : "Connect"}
-                  </Button>
-                </div>
-              </div>
-            )
-          })}
+        <div className="p-8 rounded-lg border border-dashed border-border text-center">
+          <div className="size-12 mx-auto rounded-lg bg-secondary flex items-center justify-center mb-3">
+            <Icons.plug className="size-5 text-muted-foreground" />
+          </div>
+          <div className="text-sm font-medium">No integrations connected</div>
+          <div className="text-xs text-muted-foreground mt-1 max-w-sm mx-auto">
+            Connect Slack, HubSpot, Salesforce, Google Drive, and more to sync signed documents to your existing tools.
+          </div>
+          <Button size="sm" variant="outline" className="mt-4 h-8 text-xs gap-1.5">
+            <Icons.plus className="size-3.5" />
+            Browse integrations
+          </Button>
         </div>
       </Card>
     </div>
