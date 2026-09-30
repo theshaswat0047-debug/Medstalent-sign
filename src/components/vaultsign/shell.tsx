@@ -437,11 +437,11 @@ function SidebarContent({
 
         <div className="flex items-center gap-2 px-1 pt-1">
           <Avatar className="size-8 rounded-md">
-            <AvatarFallback className="rounded-md bg-foreground text-background text-xs font-semibold">{profileDisplay.avatar}</AvatarFallback>
+            <AvatarFallback className="rounded-md bg-foreground text-background text-xs font-semibold">{profile?.avatar ?? "??"}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium truncate">{profileDisplay.name}</div>
-            <div className="text-[10px] text-muted-foreground truncate">{profileDisplay.orgLabel}</div>
+            <div className="text-xs font-medium truncate">{profile?.name ?? "User"}</div>
+            <div className="text-[10px] text-muted-foreground truncate">{profile?.orgLabel ?? "—"}</div>
           </div>
           <Button size="icon" variant="ghost" className="size-7">
             <Icons.settings className="size-3.5" />
