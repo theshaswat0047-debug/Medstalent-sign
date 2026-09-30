@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { useAppStore } from "@/lib/store"
 import type { DocumentItem } from "@/lib/mock-data"
-import { StatusBadge } from "./dashboard"
+import { StatusBadge } from "./status-badge"
 
 export function TrackingView() {
   const envelopes = useAppStore((s) => s.envelopes)

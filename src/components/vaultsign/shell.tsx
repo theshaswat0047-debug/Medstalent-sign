@@ -123,7 +123,7 @@ export function AppShell() {
 
   const renderView = () => {
     switch (effectiveView) {
-      case "dashboard":  return <DashboardView role={role} onNavigate={handleSetView} />
+      case "dashboard":  return <DashboardView onNavigate={handleSetView} />
       case "templates":  return <TemplatesView />
       case "documents":  return <DocumentsView onOpenTracking={() => handleSetView("tracking")} />
       case "editor":      return <EditorView />
