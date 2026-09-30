@@ -55,8 +55,18 @@ export async function sendEmailViaBrevo(params: BrevoEmailParams): Promise<{ suc
 
     if (!response.ok) {
       const errorBody = await response.text()
+      let errorDetail = `Brevo API error: ${response.status}`
+      try {
+        const errorJson = JSON.parse(errorBody)
+        errorDetail = `Brevo API ${response.status}: ${errorJson.message || errorJson.code || errorBody}`
+      } catch {
+        if (errorBody) errorDetail = `Brevo API ${response.status}: ${errorBody.slice(0, 200)}`
+      }
       console.error("Brevo API error:", response.status, errorBody)
-      return { success: false, error: `Brevo API error: ${response.status}` }
+      // Common error hints
+      if (response.status === 401) errorDetail += " (API key invalid or missing)"
+      if (response.status === 400 && errorBody.includes("sender")) errorDetail += " (sender email not verified in Brevo)"
+      return { success: false, error: errorDetail }
     }
 
     return { success: true }

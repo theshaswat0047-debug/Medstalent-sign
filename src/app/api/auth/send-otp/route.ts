@@ -20,6 +20,8 @@ export async function POST(req: NextRequest) {
     const user = await getUserByEmail(email)
     if (!user) {
       // Don't reveal whether email exists — return success anyway
+      // BUT include a hint in the response for debugging
+      console.warn(`[send-otp] User not found: ${email}`)
       return NextResponse.json({ success: true, message: "If an account exists, an OTP has been sent." })
     }
 
@@ -29,6 +31,7 @@ export async function POST(req: NextRequest) {
 
     // Generate 6-digit code
     const code = Math.floor(100000 + Math.random() * 900000).toString()
+    console.log(`[send-otp] Generated OTP for ${email}: ${code}`)
 
     // Hash the code before storing
     const codeHash = await bcrypt.hash(code, 10)
@@ -36,18 +39,23 @@ export async function POST(req: NextRequest) {
     // Store the hash in otp_codes (expires in 5 min)
     const stored = await createOtpCode(email, codeHash)
     if (!stored) {
-      return NextResponse.json({ error: "Failed to generate OTP" }, { status: 500 })
+      console.error(`[send-otp] Failed to store OTP code in DB for ${email}`)
+      return NextResponse.json({ error: "Failed to generate OTP. Check that the otp_codes table exists in Supabase." }, { status: 500 })
     }
 
     // Send via Brevo
     const result = await sendOtpEmail(email, code)
     if (!result.success) {
-      return NextResponse.json({ error: "Failed to send OTP email" }, { status: 500 })
+      console.error(`[send-otp] Brevo send failed for ${email}:`, result.error)
+      return NextResponse.json({
+        error: `Failed to send OTP email. ${result.error || "Check that Brevo API key and sender email are configured in Platform Settings."}`
+      }, { status: 500 })
     }
 
+    console.log(`[send-otp] OTP sent successfully to ${email}`)
     return NextResponse.json({ success: true, message: "OTP sent via email" })
   } catch (error) {
-    console.error("send-otp error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("[send-otp] Unhandled error:", error)
+    return NextResponse.json({ error: "Internal server error: " + (error instanceof Error ? error.message : "unknown") }, { status: 500 })
   }
 }
