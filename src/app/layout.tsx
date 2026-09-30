@@ -15,13 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  // Use VERCEL_URL (auto-provided by Vercel on every deploy) so this works
-  // on any Vercel project. Falls back to localhost in dev.
-  metadataBase: new URL(
-    process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
-  ),
+  // Vercel project: vault_sign → URL: vaultsign-khaki.vercel.app
+  metadataBase: new URL("https://vaultsign-khaki.vercel.app"),
   title: "VaultSign — Secure. Sign. Done.",
   description:
     "VaultSign is an enterprise-grade e-signature platform. Send, sign, and track documents end-to-end with 100+ templates, an in-built editor, real-time tracking, and SOC 2 / HIPAA / eIDAS compliance.",
