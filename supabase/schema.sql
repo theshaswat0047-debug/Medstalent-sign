@@ -150,7 +150,7 @@ create trigger organizations_updated_at
 -- 1. Authentication → Providers → Email → ensure "Enable Email provider" is ON
 -- 2. Authentication → Sign In / Providers → ensure "Enable Email OTP" is ON
 -- 3. Authentication → URL Configuration → set Site URL to
---    https://vaultsign-khaki.vercel.app
+--    https://YOUR-VERCEL-PROJECT.vercel.app
 -- 4. Create the SuperAdmin user:
 --    Authentication → Users → Add user →
 --    Email: maya@vaultsign.io → check "Auto Confirm User" → Create
