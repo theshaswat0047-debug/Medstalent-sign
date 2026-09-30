@@ -14,19 +14,35 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vaultsign — Enterprise e-Signature Platform",
+  title: "VaultSign — Secure. Sign. Done.",
   description:
-    "Send, sign, and track documents end-to-end with enterprise-grade e-signatures. 100+ templates, in-built editor, real-time Brevo-powered tracking, and SOC 2 / HIPAA / eIDAS compliance.",
+    "VaultSign is an enterprise-grade e-signature platform. Send, sign, and track documents end-to-end with 100+ templates, an in-built editor, real-time Brevo-powered tracking, and SOC 2 / HIPAA / eIDAS compliance.",
   keywords: [
-    "Vaultsign", "e-signature", "electronic signature", "document signing",
+    "VaultSign", "e-signature", "electronic signature", "document signing",
     "DocuSign alternative", "Dropbox Sign", "Brevo", "enterprise", "audit trail",
+    "Secure Sign Done",
   ],
-  authors: [{ name: "Vaultsign" }],
+  authors: [{ name: "VaultSign" }],
+  icons: {
+    icon: [
+      { url: "/vaultsign-favicon.png", type: "image/png", sizes: "512x512" },
+    ],
+    apple: [
+      { url: "/vaultsign-favicon.png", sizes: "512x512" },
+    ],
+  },
   openGraph: {
-    title: "Vaultsign — Enterprise e-Signature Platform",
-    description: "Send, sign, and track documents end-to-end. 100+ templates, in-built editor, real-time tracking.",
-    siteName: "Vaultsign",
+    title: "VaultSign — Secure. Sign. Done.",
+    description: "Enterprise e-signature platform. 100+ templates, in-built editor, real-time tracking.",
+    siteName: "VaultSign",
     type: "website",
+    images: ["/vaultsign-brand.png"],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "VaultSign — Secure. Sign. Done.",
+    description: "Enterprise e-signature platform with real-time Brevo tracking.",
+    images: ["/vaultsign-brand.png"],
   },
 };
 

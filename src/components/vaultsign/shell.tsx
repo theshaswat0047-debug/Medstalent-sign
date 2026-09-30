@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import { Icons } from "./icons"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -44,7 +45,7 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 const ROLE_PROFILES: Record<Role, { name: string; email: string; avatar: string; orgLabel: string; scope: string }> = {
-  SUPERADMIN: { name: "Maya Krishnan", email: "maya@vaultsign.io", avatar: "MK", orgLabel: "Vaultsign Platform", scope: "Platform-wide access" },
+  SUPERADMIN: { name: "Maya Krishnan", email: "maya@vaultsign.io", avatar: "MK", orgLabel: "VaultSign Platform", scope: "Platform-wide access" },
   ORG_ADMIN:  { name: "Aisha Khan", email: "aisha.k@vaultsign.io", avatar: "AK", orgLabel: "Acme Holdings", scope: "Organization admin" },
   MANAGER:    { name: "Priya Nair", email: "priya.n@vaultsign.io", avatar: "PN", orgLabel: "Acme · Legal Dept", scope: "Team manager" },
   USER:       { name: "Vikram Shah", email: "vikram.s@vaultsign.io", avatar: "VS", orgLabel: "Acme · Sales", scope: "Standard user" },
@@ -86,12 +87,19 @@ export function AppShell() {
 
           {/* Logo + brand */}
           <div className="flex items-center gap-2.5">
-            <div className="size-8 rounded-lg bg-foreground flex items-center justify-center">
-              <Icons.shield className="size-4.5 text-background" />
-            </div>
+            <Image
+              src="/vaultsign-logo.png"
+              alt="VaultSign"
+              width={36}
+              height={36}
+              priority
+              className="size-9 w-auto h-9 object-contain"
+            />
             <div className="hidden sm:block">
-              <div className="text-[15px] font-semibold tracking-tight leading-none">Vaultsign</div>
-              <div className="text-[11px] text-muted-foreground mt-0.5 leading-none">Enterprise e-Signature</div>
+              <div className="text-[15px] font-semibold tracking-tight leading-none">
+                Vault<span className="text-muted-foreground">Sign</span>
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-1 leading-none tracking-wide">Secure. Sign. Done.</div>
             </div>
           </div>
 
@@ -228,10 +236,16 @@ export function AppShell() {
             <aside className="relative w-72 max-w-[80vw] bg-card border-r border-border flex flex-col animate-fade-in">
               <div className="h-16 flex items-center justify-between px-4 border-b border-border">
                 <div className="flex items-center gap-2.5">
-                  <div className="size-7 rounded-lg bg-foreground flex items-center justify-center">
-                    <Icons.shield className="size-4 text-background" />
-                  </div>
-                  <span className="font-semibold text-sm">Vaultsign</span>
+                  <Image
+                    src="/vaultsign-logo.png"
+                    alt="VaultSign"
+                    width={28}
+                    height={28}
+                    className="size-7 w-auto h-7 object-contain"
+                  />
+                  <span className="font-semibold text-sm">
+                    Vault<span className="text-muted-foreground">Sign</span>
+                  </span>
                 </div>
                 <Button size="icon" variant="ghost" className="size-8" onClick={() => setSidebarOpen(false)}>
                   <Icons.x className="size-4" />
