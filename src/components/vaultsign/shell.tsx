@@ -1,11 +1,13 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { Icons } from "./icons"
 import { BrandMark } from "./brand-mark"
 import { SendDocumentModal } from "./send-modal"
 import { useAppStore } from "@/lib/store"
+import { useAuthStore, type Role, type SessionUser } from "@/lib/auth-store"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -82,20 +84,35 @@ function defaultViewForRole(role: Role): ViewKey {
 }
 
 export function AppShell() {
-  const [role, setRole] = useState<Role>("SUPERADMIN")
-  const [view, setView] = useState<ViewKey>("platform_organizations")
+  const router = useRouter()
+  const authUser = useAuthStore((s) => s.user)
+  const logout = useAuthStore((s) => s.logout)
+
+  // Role is now driven by the authenticated session, not local state
+  const role: Role = authUser?.role ?? "USER"
+  const [view, setView] = useState<ViewKey>(defaultViewForRole(role))
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const openSendModal = useAppStore((s) => s.openSendModal)
 
-  const profile = ROLE_PROFILES[role]
+  // Build the profile from the auth session, falling back to ROLE_PROFILES
+  const profile: SessionUser = authUser ?? {
+    id: "anon",
+    email: "",
+    name: "Anonymous",
+    avatar: "??",
+    role,
+    orgLabel: ROLE_PROFILES[role]?.orgLabel ?? "",
+    scope: ROLE_PROFILES[role]?.scope ?? "",
+  }
+
   const visibleNav = navForRole(role)
 
   // If the current view isn't available to the current role, fall back.
   const effectiveView: ViewKey = visibleNav.some((n) => n.key === view) ? view : defaultViewForRole(role)
 
-  const handleSetRole = (r: Role) => {
-    setRole(r)
-    setView(defaultViewForRole(r))
+  const handleLogout = () => {
+    logout()
+    router.replace("/login")
   }
 
   const handleSetView = (v: ViewKey) => {
@@ -214,7 +231,7 @@ export function AppShell() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Role switcher */}
+            {/* User menu — shows logged-in user + logout */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 h-9 pl-1.5 pr-2 rounded-lg hover:bg-accent/60 transition-colors">
@@ -231,45 +248,33 @@ export function AppShell() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64 p-0 shadow-popover">
+                {/* Current user info */}
                 <div className="px-3 py-3 border-b border-border">
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-1">Switch role</div>
-                  <div className="text-xs text-muted-foreground">Preview the app from each role's perspective</div>
+                  <div className="flex items-center gap-2.5">
+                    <Avatar className="size-9 rounded-md">
+                      <AvatarFallback className="rounded-md bg-foreground text-background text-[11px] font-semibold">{profile.avatar}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{profile.name}</div>
+                      <div className="text-[11px] text-muted-foreground truncate">{profile.email}</div>
+                    </div>
+                  </div>
+                  <div className="mt-2.5 flex items-center gap-1.5">
+                    <Badge variant="outline" className="h-5 text-[10px] gap-1">
+                      <Icons.shield className="size-2.5" />
+                      {profile.role.replace("_", " ")}
+                    </Badge>
+                    <span className="text-[10px] text-muted-foreground">{profile.scope}</span>
+                  </div>
                 </div>
-                {(Object.keys(ROLE_PROFILES) as Role[]).map((r) => {
-                  const p = ROLE_PROFILES[r]
-                  return (
-                    <DropdownMenuItem
-                      key={r}
-                      onClick={() => handleSetRole(r)}
-                      className={cn("flex items-start gap-2.5 px-3 py-2.5 cursor-pointer", role === r && "bg-accent/60")}
-                    >
-                      <Avatar className="size-8 rounded-md mt-0.5">
-                        <AvatarFallback className="rounded-md bg-foreground text-background text-[11px] font-semibold">{p.avatar}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-medium truncate">{p.name}</span>
-                          {role === r && <Icons.check2 className="size-3.5 text-foreground" />}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground truncate">{p.scope}</div>
-                        <div className="text-[10px] text-muted-foreground/70 mt-0.5">{p.orgLabel}</div>
-                      </div>
-                    </DropdownMenuItem>
-                  )
-                })}
-                <DropdownMenuSeparator />
-                <div className="px-3 py-2.5">
-                  <div className="text-[11px] text-muted-foreground mb-1.5">Currently signed in as</div>
-                  <div className="text-xs font-medium">{profile.email}</div>
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="cursor-pointer text-xs h-9">
-                  <Icons.user className="size-3.5 mr-2" /> Profile
+                <DropdownMenuItem className="cursor-pointer text-xs h-9" onSelect={(e) => e.preventDefault()}>
+                  <Icons.user className="size-3.5 mr-2" /> Profile settings
                 </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer text-xs h-9">
+                <DropdownMenuItem className="cursor-pointer text-xs h-9" onSelect={(e) => e.preventDefault()}>
                   <Icons.key className="size-3.5 mr-2" /> API keys
                 </DropdownMenuItem>
-                <DropdownMenuItem className="cursor-pointer text-xs h-9 text-rose-600">
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="cursor-pointer text-xs h-9 text-rose-600" onSelect={handleLogout}>
                   <Icons.x className="size-3.5 mr-2" /> Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
