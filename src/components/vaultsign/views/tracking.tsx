@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Icons } from "../icons"
 import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
@@ -9,47 +9,84 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
 import { useAppStore } from "@/lib/store"
-import type { DocumentItem } from "@/lib/mock-data"
 import { StatusBadge } from "./status-badge"
 
+interface DocRow {
+  id: string
+  name: string
+  template_name?: string
+  status: string
+  owner_name?: string
+  owner_avatar?: string
+  page_count?: number
+  progress?: number
+  created_at: string
+  updated_at: string
+}
+
 export function TrackingView() {
-  const envelopes = useAppStore((s) => s.envelopes)
+  const [docs, setDocs] = useState<DocRow[]>([])
+  const [loading, setLoading] = useState(true)
   const selectedEnvelopeId = useAppStore((s) => s.selectedEnvelopeId)
   const selectEnvelope = useAppStore((s) => s.selectEnvelope)
   const [localSelectedId, setLocalSelectedId] = useState<string | null>(null)
 
-  // Derive the effective selected id: prefer local click, then store, then first.
-  // No effect needed — this is pure derivation during render.
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch("/api/documents")
+        if (res.ok) {
+          const data = await res.json()
+          setDocs(data.documents || [])
+        }
+      } catch {
+        // ignore
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [])
+
   const effectiveId =
-    localSelectedId && envelopes.some((d) => d.id === localSelectedId)
+    localSelectedId && docs.some((d) => d.id === localSelectedId)
       ? localSelectedId
-      : selectedEnvelopeId && envelopes.some((d) => d.id === selectedEnvelopeId)
+      : selectedEnvelopeId && docs.some((d) => d.id === selectedEnvelopeId)
         ? selectedEnvelopeId
-        : envelopes[0]?.id ?? null
+        : docs[0]?.id ?? null
 
   const handleSelect = (id: string) => {
     setLocalSelectedId(id)
     selectEnvelope(id)
   }
 
-  const selected = envelopes.find((d) => d.id === effectiveId) ?? envelopes[0]
+  const selected = docs.find((d) => d.id === effectiveId) ?? null
 
-  // Empty-state guard
-  if (!selected) {
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Icons.loader className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
+  if (docs.length === 0 || !selected) {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Tracking & Audit Trail</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Real-time envelope tracking real-time email tracking — delivery, opens, views, and signatures.
+            Real-time envelope tracking — delivery, opens, views, and signatures.
           </p>
         </div>
         <Card className="p-12 text-center shadow-card">
           <div className="size-12 mx-auto rounded-xl bg-secondary flex items-center justify-center">
             <Icons.tracking className="size-5 text-muted-foreground" />
           </div>
-          <div className="mt-3 text-sm font-medium">No envelopes yet</div>
-          <div className="text-xs text-muted-foreground mt-1">Send your first document to start tracking.</div>
+          <div className="mt-3 text-sm font-medium">No envelopes to track</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Send your first document to start tracking delivery, opens, and signatures.
+          </div>
         </Card>
       </div>
     )
@@ -57,47 +94,17 @@ export function TrackingView() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Tracking & Audit Trail</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Real-time envelope tracking real-time email tracking — delivery, opens, views, and signatures.
+            Real-time envelope tracking — delivery, opens, views, and signatures.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2.5 h-9 rounded-lg bg-emerald-50 border border-emerald-200">
-            <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse-dot" />
-            <span className="text-xs font-medium text-emerald-700">Email tracking live</span>
-          </div>
-          <Button variant="outline" size="sm" className="h-9 gap-1.5">
-            <Icons.download className="size-3.5" />
-            Export audit
-          </Button>
-        </div>
-      </div>
-
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-        {[
-          { label: "Delivery rate", value: "99.4%", sub: "1,277 / 1,284", icon: "mail" as const, color: "text-emerald-600" },
-          { label: "Open rate", value: "76.8%", sub: "987 / 1,284", icon: "eye" as const, color: "text-blue-600" },
-          { label: "View rate", value: "71.2%", sub: "914 / 1,284", icon: "documents" as const, color: "text-amber-600" },
-          { label: "Sign rate", value: "81.2%", sub: "1,043 / 1,284", icon: "check" as const, color: "text-emerald-600" },
-          { label: "Avg time", value: "6.4h", sub: "to first signature", icon: "clock3" as const, color: "text-foreground" },
-        ].map((k) => {
-          const Icon = Icons[k.icon]
-          return (
-            <Card key={k.label} className="p-3.5 shadow-card">
-              <div className="flex items-center justify-between">
-                <Icon className={cn("size-4", k.color)} />
-                <span className="text-[10px] text-muted-foreground tabular-nums">{k.sub}</span>
-              </div>
-              <div className="mt-2 text-xl font-semibold tracking-tight tabular-nums">{k.value}</div>
-              <div className="text-[11px] text-muted-foreground">{k.label}</div>
-            </Card>
-          )
-        })}
+        <Button variant="outline" size="sm" className="h-9 gap-1.5">
+          <Icons.download className="size-3.5" />
+          Export audit
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-4">
@@ -107,7 +114,7 @@ export function TrackingView() {
             <div className="text-xs font-medium text-muted-foreground">Envelopes with tracking</div>
           </div>
           <div className="flex-1 overflow-y-auto divide-y divide-border">
-            {envelopes.filter((d) => d.status !== "DRAFT").map((d) => (
+            {docs.map((d) => (
               <button
                 key={d.id}
                 onClick={() => handleSelect(d.id)}
@@ -118,23 +125,22 @@ export function TrackingView() {
               >
                 <div className="flex items-start gap-2.5">
                   <Avatar className="size-8 rounded-md shrink-0">
-                    <AvatarFallback className="rounded-md bg-secondary text-[10px] font-semibold">{d.ownerAvatar}</AvatarFallback>
+                    <AvatarFallback className="rounded-md bg-secondary text-[10px] font-semibold">{d.owner_avatar || "??"}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-medium truncate">{d.name}</div>
-                    <div className="text-[10px] text-muted-foreground truncate">{d.templateName}</div>
+                    <div className="text-[10px] text-muted-foreground truncate">{d.template_name || "Custom"}</div>
                     <div className="flex items-center gap-2 mt-1.5">
                       <StatusBadge status={d.status} />
-                      <span className="text-[10px] text-muted-foreground">{d.recipients.length} recipients</span>
+                      <span className="text-[10px] text-muted-foreground">{d.page_count || 1}p</span>
                     </div>
                   </div>
                 </div>
-                {/* Mini progress bar */}
                 <div className="mt-2 flex items-center gap-1.5">
                   <div className="flex-1 h-1 rounded-full bg-muted overflow-hidden">
-                    <div className={cn("h-full rounded-full", d.progress === 100 ? "bg-emerald-500" : "bg-foreground")} style={{ width: `${d.progress}%` }} />
+                    <div className={cn("h-full rounded-full", d.progress === 100 ? "bg-emerald-500" : "bg-foreground")} style={{ width: `${d.progress || 0}%` }} />
                   </div>
-                  <span className="text-[9px] text-muted-foreground tabular-nums">{d.progress}%</span>
+                  <span className="text-[9px] text-muted-foreground tabular-nums">{d.progress || 0}%</span>
                 </div>
               </button>
             ))}
@@ -148,7 +154,7 @@ export function TrackingView() {
   )
 }
 
-function TrackingDetail({ doc }: { doc: DocumentItem }) {
+function TrackingDetail({ doc }: { doc: DocRow }) {
   return (
     <div className="space-y-4">
       {/* Document header */}
@@ -159,17 +165,9 @@ function TrackingDetail({ doc }: { doc: DocumentItem }) {
               <h2 className="text-base font-semibold truncate">{doc.name}</h2>
               <StatusBadge status={doc.status} />
             </div>
-            <div className="text-xs text-muted-foreground">{doc.templateName} · {doc.pageCount} pages · created {new Date(doc.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
-            {doc.messageId && (
-              <div className="flex items-center gap-1.5 mt-2">
-                <Icons.mail className="size-3 text-muted-foreground" />
-                <span className="text-[11px] font-mono text-muted-foreground">{doc.messageId}</span>
-                <Badge variant="outline" className="h-4 text-[9px] gap-1">
-                  <span className={cn("size-1 rounded-full", deliveryDotColor(doc.deliveryStatus))} />
-                  Email: {doc.deliveryStatus}
-                </Badge>
-              </div>
-            )}
+            <div className="text-xs text-muted-foreground">
+              {doc.template_name || "Custom document"} · {doc.page_count || 1} pages · created {new Date(doc.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+            </div>
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs">
@@ -184,108 +182,24 @@ function TrackingDetail({ doc }: { doc: DocumentItem }) {
         </div>
       </Card>
 
-      {/* Recipients status */}
-      <Card className="p-5 shadow-card">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-sm font-semibold">Recipient status</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Per-recipient delivery and signing progress</p>
-          </div>
-          <Badge variant="secondary" className="h-5 text-[10px]">{doc.recipients.length} recipients</Badge>
-        </div>
-        <div className="space-y-2.5">
-          {doc.recipients.length === 0 && (
-            <div className="text-xs text-muted-foreground text-center py-4">No recipients yet — add some in the editor.</div>
-          )}
-          {doc.recipients.map((r, i) => (
-            <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/40">
-              <Avatar className="size-9 rounded-md">
-                <AvatarFallback className="rounded-md bg-secondary text-[11px] font-semibold">
-                  {r.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium truncate">{r.name}</span>
-                  <Badge variant="outline" className="h-4 text-[9px]">{r.role}</Badge>
-                </div>
-                <div className="text-[11px] text-muted-foreground truncate">{r.email}</div>
-                {r.geolocation && (
-                  <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
-                    <span className="flex items-center gap-1"><Icons.mapPin className="size-2.5" />{r.geolocation}</span>
-                    <span className="flex items-center gap-1"><Icons.smartphone className="size-2.5" />{r.device}</span>
-                    <span className="font-mono">{r.ipAddress}</span>
-                  </div>
-                )}
-              </div>
-              <div className="shrink-0">
-                <RecipientStatusBadge status={r.status} />
-              </div>
-              <div className="shrink-0 text-right text-[10px] text-muted-foreground hidden sm:block">
-                {r.signedAt && <div>Signed {new Date(r.signedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>}
-                {r.viewedAt && !r.signedAt && <div>Viewed {new Date(r.viewedAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>}
-                {!r.viewedAt && <div>—</div>}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
       {/* Event timeline */}
       <Card className="p-5 shadow-card">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold">Event timeline & audit trail</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Tamper-evident SHA-256 hash chain · all events timestamped UTC</p>
+            <h3 className="text-sm font-semibold">Event timeline</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Tracking events appear here as they happen</p>
           </div>
           <Badge variant="outline" className="h-5 text-[10px] gap-1">
-            <Icons.shield className="size-2.5" />
-            Verified
+            <Icons.shield className="size-2.5" /> Verified
           </Badge>
         </div>
-        <div className="relative">
-          {/* Vertical line */}
-          <div className="absolute left-[15px] top-2 bottom-2 w-px bg-border" />
-          <div className="space-y-1">
-            {doc.events.map((ev, i) => {
-              const Icon = eventIcon(ev.type)
-              return (
-                <div key={ev.id} className="relative flex gap-3 p-2 hover:bg-accent/40 rounded-lg transition-colors">
-                  <div className={cn("relative z-10 size-8 rounded-full flex items-center justify-center shrink-0 border-2 border-card", eventBg(ev.type))}>
-                    <Icon className={cn("size-3.5", eventColor(ev.type))} />
-                  </div>
-                  <div className="flex-1 min-w-0 pb-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-medium">{ev.label}</span>
-                      <span className="text-[10px] text-muted-foreground">·</span>
-                      <span className="text-[10px] text-muted-foreground">{ev.actor}</span>
-                      {ev.type.startsWith("EMAIL_") && (
-                        <Badge variant="secondary" className="h-4 text-[9px] gap-0.5">
-                          <Icons.mail className="size-2" />
-                          Email
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground mt-0.5">{ev.description}</div>
-                    {ev.meta && Object.keys(ev.meta).length > 0 && (
-                      <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                        {Object.entries(ev.meta).map(([k, v]) => (
-                          <span key={k} className="text-[10px] font-mono text-muted-foreground bg-secondary/60 px-1.5 py-0.5 rounded">
-                            {k}: <span className="text-foreground">{v}</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <div className="text-[10px] text-muted-foreground mt-1">
-                      {new Date(ev.timestamp).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })} UTC
-                    </div>
-                  </div>
-                  <div className="hidden md:flex items-center">
-                    <span className="text-[10px] font-mono text-muted-foreground/60">#{String(i + 1).padStart(3, "0")}</span>
-                  </div>
-                </div>
-              )
-            })}
+        <div className="text-center py-12">
+          <div className="size-10 mx-auto rounded-lg bg-secondary flex items-center justify-center">
+            <Icons.clock className="size-5 text-muted-foreground" />
+          </div>
+          <div className="mt-3 text-sm font-medium">No events yet</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Once this document is sent, delivery and signature events will appear here in real time.
           </div>
         </div>
       </Card>
@@ -303,83 +217,14 @@ function TrackingDetail({ doc }: { doc: DocumentItem }) {
           </Button>
         </div>
         <div className="bg-secondary/40 rounded-lg p-4 font-mono text-[11px] space-y-1">
-          <div className="flex justify-between"><span className="text-muted-foreground">Envelope ID:</span><span>{doc.id.toUpperCase()}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Envelope ID:</span><span>{doc.id.slice(0, 8).toUpperCase()}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Status:</span><span>{doc.status}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Recipients:</span><span>{doc.recipients.length}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Events logged:</span><span>{doc.events.length}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Created:</span><span>{new Date(doc.createdAt).toISOString()}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Last update:</span><span>{new Date(doc.updatedAt).toISOString()}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Created:</span><span>{new Date(doc.created_at).toISOString()}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">Last update:</span><span>{new Date(doc.updated_at).toISOString()}</span></div>
           <Separator className="my-2" />
-          <div className="flex justify-between"><span className="text-muted-foreground">Chain root hash:</span><span className="truncate ml-2">9f2a...c1b7 (SHA-256)</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Compliance:</span><span>ESIGN · UETA · eIDAS</span></div>
         </div>
       </Card>
     </div>
   )
-}
-
-function RecipientStatusBadge({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string }> = {
-    PENDING:   { label: "Pending",   cls: "bg-secondary text-muted-foreground" },
-    SENT:      { label: "Sent",      cls: "bg-blue-50 text-blue-700" },
-    DELIVERED: { label: "Delivered", cls: "bg-blue-50 text-blue-700" },
-    VIEWED:    { label: "Viewed",    cls: "bg-amber-50 text-amber-700" },
-    SIGNED:    { label: "Signed",    cls: "bg-emerald-50 text-emerald-700" },
-    DECLINED:  { label: "Declined",  cls: "bg-rose-50 text-rose-700" },
-    BOUNCED:   { label: "Bounced",   cls: "bg-rose-50 text-rose-700" },
-  }
-  const s = map[status] ?? { label: status, cls: "bg-secondary" }
-  return <Badge variant="secondary" className={cn("h-5 px-1.5 text-[10px] font-medium", s.cls)}>{s.label}</Badge>
-}
-
-function eventIcon(type: string) {
-  switch (type) {
-    case "EMAIL_QUEUED": return Icons.clock
-    case "EMAIL_SENT": return Icons.send
-    case "EMAIL_DELIVERED": return Icons.mail
-    case "EMAIL_OPENED": return Icons.eye
-    case "EMAIL_CLICKED": return Icons.arrowUpRight
-    case "EMAIL_BOUNCED": return Icons.alert
-    case "DOC_VIEWED": return Icons.eye
-    case "PAGE_VIEWED": return Icons.documents
-    case "FIELD_FILLED": return Icons.edit
-    case "SIGNED": return Icons.check
-    case "DECLINED": return Icons.xCircle
-    case "COMPLETED": return Icons.fileCheck
-    case "VOIDED": return Icons.x
-    case "REMINDER_SENT": return Icons.bell
-    default: return Icons.dot
-  }
-}
-function eventBg(type: string) {
-  if (type.startsWith("EMAIL_")) return "bg-secondary"
-  switch (type) {
-    case "SIGNED":
-    case "COMPLETED": return "bg-emerald-50"
-    case "DECLINED":
-    case "VOIDED": return "bg-rose-50"
-    default: return "bg-secondary"
-  }
-}
-function eventColor(type: string) {
-  if (type.startsWith("EMAIL_")) return "text-foreground"
-  switch (type) {
-    case "SIGNED":
-    case "COMPLETED": return "text-emerald-600"
-    case "DECLINED":
-    case "VOIDED": return "text-rose-600"
-    case "DOC_VIEWED": return "text-blue-600"
-    default: return "text-foreground"
-  }
-}
-
-function deliveryDotColor(status?: string) {
-  switch (status) {
-    case "delivered": return "bg-blue-500"
-    case "opened": return "bg-emerald-500"
-    case "clicked": return "bg-emerald-600"
-    case "bounced":
-    case "blocked": return "bg-rose-500"
-    default: return "bg-muted-foreground"
-  }
 }

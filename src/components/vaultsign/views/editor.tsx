@@ -1,6 +1,14 @@
 "use client"
 
 import { useState } from "react"
+import { useEditor, EditorContent } from "@tiptap/react"
+import StarterKit from "@tiptap/starter-kit"
+import { Underline } from "@tiptap/extension-underline"
+import { TextAlign } from "@tiptap/extension-text-align"
+import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table"
+import { Image as TiptapImage } from "@tiptap/extension-image"
+import { Link } from "@tiptap/extension-link"
+import { Placeholder } from "@tiptap/extension-placeholder"
 import { Icons } from "../icons"
 import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
@@ -9,6 +17,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useToast } from "@/hooks/use-toast"
 
 const FIELD_TYPES = [
   { key: "signature", label: "Signature", icon: "sign" as const },
@@ -20,46 +29,10 @@ const FIELD_TYPES = [
   { key: "stamp", label: "Company seal", icon: "shield" as const },
 ]
 
-const TOOLBAR_GROUPS = [
-  {
-    items: [
-      { icon: "edit3" as const, label: "Bold", shortcut: "⌘B" },
-      { icon: "edit3" as const, label: "Italic", shortcut: "⌘I" },
-      { icon: "edit3" as const, label: "Underline", shortcut: "⌘U" },
-      { icon: "edit3" as const, label: "Strikethrough" },
-    ],
-  },
-  {
-    items: [
-      { icon: "chevronDown" as const, label: "Heading 1" },
-      { icon: "chevronDown" as const, label: "Paragraph" },
-      { icon: "chevronDown" as const, label: "Font: Inter" },
-      { icon: "chevronDown" as const, label: "12pt" },
-    ],
-  },
-  {
-    items: [
-      { icon: "chevronRight" as const, label: "Align left" },
-      { icon: "chevronRight" as const, label: "Align center" },
-      { icon: "chevronRight" as const, label: "Align right" },
-    ],
-  },
-  {
-    items: [
-      { icon: "plus" as const, label: "Insert table" },
-      { icon: "plus" as const, label: "Insert image" },
-      { icon: "plus" as const, label: "Insert link" },
-      { icon: "plus" as const, label: "Page break" },
-    ],
-  },
-]
-
 export function EditorView() {
+  const { toast } = useToast()
   const [selectedRecipient, setSelectedRecipient] = useState(0)
-  const [placedFields, setPlacedFields] = useState<{ id: string; type: string; recipientIdx: number; x: number; y: number }[]>([
-    { id: "f1", type: "signature", recipientIdx: 0, x: 70, y: 72 },
-    { id: "f2", type: "date", recipientIdx: 0, x: 70, y: 80 },
-  ])
+  const [placedFields, setPlacedFields] = useState<{ id: string; type: string; recipientIdx: number; }[]>([])
 
   const recipients = [
     { name: "Rahul Verma", email: "rahul.verma@acme.example", color: "bg-blue-500" },
@@ -67,19 +40,73 @@ export function EditorView() {
     { name: "VaultSign Legal", email: "legal@vaultsign.io", color: "bg-emerald-500" },
   ]
 
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: { levels: [1, 2, 3] },
+      }),
+      Underline,
+      TextAlign.configure({ types: ["heading", "paragraph"] }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      TiptapImage.configure({ inline: false }),
+      Link.configure({ openOnClick: false }),
+      Placeholder.configure({
+        placeholder: "Start typing your document, or use the toolbar to format…",
+      }),
+    ],
+    content: `
+      <h1>Master Service Agreement</h1>
+      <p><em>VaultSign, Inc. · Effective Date: September 30, 2026</em></p>
+      <p>This Master Service Agreement ("Agreement") is entered into as of the Effective Date by and between <strong>Acme Corporation</strong> ("Client") and <strong>VaultSign, Inc.</strong> ("Service Provider").</p>
+      <h2>1. Services</h2>
+      <p>Service Provider shall provide the services described in one or more mutually executed Statements of Work (each, a "SOW"). Each SOW shall incorporate by reference the terms and conditions of this Agreement.</p>
+      <h2>2. Term & Termination</h2>
+      <p>This Agreement commences on the Effective Date and continues until terminated by either Party upon thirty (30) days written notice.</p>
+      <h2>3. Confidentiality</h2>
+      <p>Each Party agrees to maintain the confidentiality of the other Party's Confidential Information with the same degree of care it uses for its own.</p>
+      <h2>4. Signatures</h2>
+      <p>IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective Date first written above.</p>
+      <table>
+        <tr>
+          <td><strong>Client:</strong></td>
+          <td><strong>Service Provider:</strong></td>
+        </tr>
+        <tr>
+          <td><br/>Name / Title</td>
+          <td><br/>Name / Title</td>
+        </tr>
+      </table>
+    `,
+    editorProps: {
+      attributes: {
+        class: "prose prose-sm max-w-none focus:outline-none min-h-[500px] p-12",
+      },
+    },
+  })
+
   const addField = (type: string) => {
     const newField = {
       id: `f${Date.now()}`,
       type,
       recipientIdx: selectedRecipient,
-      x: 50 + Math.random() * 30,
-      y: 50 + Math.random() * 30,
     }
     setPlacedFields((prev) => [...prev, newField])
+    toast({ title: `${type} field added`, description: `Assigned to ${recipients[selectedRecipient]?.name}` })
   }
 
   const removeField = (id: string) => {
     setPlacedFields((prev) => prev.filter((f) => f.id !== id))
+  }
+
+  if (!editor) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Icons.loader className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   return (
@@ -92,10 +119,10 @@ export function EditorView() {
           </Button>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-base font-semibold">Master Service Agreement</h1>
+              <h1 className="text-base font-semibold">Document Editor</h1>
               <Badge variant="secondary" className="h-5 text-[10px]">Draft</Badge>
             </div>
-            <div className="text-xs text-muted-foreground mt-0.5">12 pages · Last saved 2 min ago · Auto-saved</div>
+            <div className="text-xs text-muted-foreground mt-0.5">Auto-saved · {editor.storage.characterCount?.words?.() ?? 0} words</div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -114,7 +141,7 @@ export function EditorView() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_280px] gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr_280px] gap-4">
         {/* Left panel — recipient picker + field palette */}
         <div className="space-y-4 order-2 lg:order-1">
           <Card className="p-4 shadow-card">
@@ -147,7 +174,7 @@ export function EditorView() {
           <Card className="p-4 shadow-card">
             <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-2.5">Field palette</div>
             <div className="text-[11px] text-muted-foreground mb-2">
-              Drag onto the document — assigns to <span className="font-medium text-foreground">{recipients[selectedRecipient]?.name}</span>
+              Click to add — assigns to <span className="font-medium text-foreground">{recipients[selectedRecipient]?.name}</span>
             </div>
             <div className="grid grid-cols-2 gap-1.5">
               {FIELD_TYPES.map((f) => {
@@ -156,7 +183,7 @@ export function EditorView() {
                   <button
                     key={f.key}
                     onClick={() => addField(f.key)}
-                    className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-border bg-card hover:bg-accent/60 hover:border-foreground/30 transition-all cursor-grab active:cursor-grabbing"
+                    className="flex flex-col items-center gap-1 p-2.5 rounded-lg border border-border bg-card hover:bg-accent/60 hover:border-foreground/30 transition-all cursor-pointer"
                   >
                     <Icon className="size-4 text-foreground" />
                     <span className="text-[10px] font-medium">{f.label}</span>
@@ -168,140 +195,93 @@ export function EditorView() {
             <div className="text-[11px] text-muted-foreground mb-2">Merge fields</div>
             <div className="flex flex-wrap gap-1">
               {["{{recipient.name}}", "{{company}}", "{{date}}", "{{email}}"].map((m) => (
-                <Badge key={m} variant="outline" className="text-[10px] font-mono cursor-pointer hover:bg-accent/60">{m}</Badge>
+                <Badge key={m} variant="outline" className="text-[10px] font-mono cursor-pointer hover:bg-accent/60" >{m}</Badge>
               ))}
             </div>
           </Card>
         </div>
 
-        {/* Center — document canvas */}
+        {/* Center — editor */}
         <div className="order-1 lg:order-2 min-w-0">
           {/* Toolbar */}
           <Card className="mb-3 p-1.5 shadow-card">
             <TooltipProvider delayDuration={300}>
               <div className="flex items-center gap-0.5 overflow-x-auto">
-                {TOOLBAR_GROUPS.map((group, gi) => (
-                  <div key={gi} className="flex items-center gap-0.5">
-                    {gi > 0 && <Separator orientation="vertical" className="mx-1 h-5" />}
-                    {group.items.map((item, i) => (
-                      <Tooltip key={i}>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="size-7">
-                            <item.icon className="size-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom" className="text-xs">
-                          {item.label}{item.shortcut && <span className="ml-2 text-muted-foreground">{item.shortcut}</span>}
-                        </TooltipContent>
-                      </Tooltip>
-                    ))}
-                  </div>
-                ))}
-                <div className="ml-auto flex items-center gap-1 pr-1">
-                  <Button variant="ghost" size="icon" className="size-7"><Icons.refresh className="size-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="size-7"><Icons.download className="size-3.5" /></Button>
-                </div>
+                {/* Undo/Redo */}
+                <ToolbarButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} icon="arrowLeft" label="Undo" />
+                <ToolbarButton onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} icon="arrowRight" label="Redo" />
+                <Separator orientation="vertical" className="mx-1 h-5" />
+
+                {/* Headings */}
+                <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive("heading", { level: 1 })} label="H1" text />
+                <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive("heading", { level: 2 })} label="H2" text />
+                <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive("heading", { level: 3 })} label="H3" text />
+                <Separator orientation="vertical" className="mx-1 h-5" />
+
+                {/* Bold/Italic/Underline/Strike */}
+                <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} icon="edit3" label="Bold" />
+                <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")} icon="edit3" label="Italic" />
+                <ToolbarButton onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive("underline")} icon="edit3" label="Underline" />
+                <ToolbarButton onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive("strike")} icon="edit3" label="Strikethrough" />
+                <Separator orientation="vertical" className="mx-1 h-5" />
+
+                {/* Lists */}
+                <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} icon="chevronRight" label="Bullet list" />
+                <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} icon="chevronRight" label="Numbered list" />
+                <Separator orientation="vertical" className="mx-1 h-5" />
+
+                {/* Alignment */}
+                <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("left").run()} active={editor.isActive({ textAlign: "left" })} icon="chevronRight" label="Align left" />
+                <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("center").run()} active={editor.isActive({ textAlign: "center" })} icon="chevronRight" label="Align center" />
+                <ToolbarButton onClick={() => editor.chain().focus().setTextAlign("right").run()} active={editor.isActive({ textAlign: "right" })} icon="chevronRight" label="Align right" />
+                <Separator orientation="vertical" className="mx-1 h-5" />
+
+                {/* Insert */}
+                <ToolbarButton onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 2, withHeaderRow: true }).run()} icon="plus" label="Insert table" />
+                <ToolbarButton onClick={() => {
+                  const url = prompt("Enter image URL")
+                  if (url) editor.chain().focus().setImage({ src: url }).run()
+                }} icon="plus" label="Insert image" />
+                <ToolbarButton onClick={() => {
+                  const url = prompt("Enter link URL")
+                  if (url) editor.chain().focus().setLink({ href: url }).run()
+                }} icon="plus" label="Insert link" />
+                <Separator orientation="vertical" className="mx-1 h-5" />
+
+                {/* Clear */}
+                <ToolbarButton onClick={() => editor.chain().focus().unsetAllMarks().run()} icon="x" label="Clear formatting" />
               </div>
             </TooltipProvider>
           </Card>
 
-          {/* Document */}
+          {/* Document canvas */}
           <div className="bg-secondary/40 p-4 lg:p-8 rounded-xl min-h-[600px] flex justify-center">
-            <div className="bg-card shadow-card rounded-sm w-full max-w-[640px] aspect-[1/1.414] relative">
-              {/* Document content */}
-              <div className="p-10 lg:p-12 text-[10px] leading-relaxed">
-                <div className="text-center mb-6">
-                  <div className="text-base font-bold tracking-tight">MASTER SERVICE AGREEMENT</div>
-                  <div className="text-[9px] text-muted-foreground mt-1">VaultSign, Inc. · Effective Date: September 30, 2026</div>
-                </div>
+            <div className="bg-card shadow-card rounded-sm w-full max-w-[640px] min-h-[500px] overflow-hidden">
+              <EditorContent editor={editor} />
+            </div>
+          </div>
 
-                <div className="space-y-3 text-[9px]">
-                  <p>
-                    This Master Service Agreement ("<span className="font-semibold">Agreement</span>") is entered into as of the Effective Date by and between
-                    <span className="bg-amber-100/60"> Acme Corporation</span> ("<span className="font-semibold">Client</span>") and
-                    <span className="bg-amber-100/60"> VaultSign, Inc.</span> ("<span className="font-semibold">Service Provider</span>").
-                  </p>
-
-                  <div className="font-semibold mt-4">1. SERVICES</div>
-                  <p>
-                    Service Provider shall provide the services described in one or more mutually executed Statements of Work (each, a "<span className="font-semibold">SOW</span>"). Each SOW shall incorporate by reference the terms and conditions of this Agreement. In the event of a conflict between this Agreement and a SOW, the SOW shall control with respect to the specific services described therein.
-                  </p>
-
-                  <div className="font-semibold mt-4">2. TERM & TERMINATION</div>
-                  <p>
-                    This Agreement commences on the Effective Date and continues until terminated by either Party upon thirty (30) days written notice. Either Party may terminate this Agreement immediately upon written notice in the event of a material breach by the other Party that remains uncured for fifteen (15) days following written notice.
-                  </p>
-
-                  <div className="font-semibold mt-4">3. CONFIDENTIALITY</div>
-                  <p>
-                    Each Party agrees to maintain the confidentiality of the other Party's Confidential Information with the same degree of care it uses for its own, and not less than a reasonable standard of care. Confidential Information shall not be disclosed to third parties without prior written consent, except to employees and contractors with a need to know.
-                  </p>
-
-                  <div className="font-semibold mt-4">4. SIGNATURES</div>
-                  <p className="mb-8">
-                    IN WITNESS WHEREOF, the Parties have executed this Agreement as of the Effective Date first written above.
-                  </p>
-                </div>
-
-                {/* Signature lines */}
-                <div className="grid grid-cols-2 gap-6 mt-8 relative">
-                  <div>
-                    <div className="text-[8px] text-muted-foreground mb-8">CLIENT:</div>
-                    <div className="border-b border-foreground/40 mb-1 h-4"></div>
-                    <div className="text-[7px] text-muted-foreground">Name / Title</div>
-                  </div>
-                  <div>
-                    <div className="text-[8px] text-muted-foreground mb-8">SERVICE PROVIDER:</div>
-                    <div className="border-b border-foreground/40 mb-1 h-4"></div>
-                    <div className="text-[7px] text-muted-foreground">Name / Title</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Placed signature fields overlay */}
-              {placedFields.map((f) => {
-                const r = recipients[f.recipientIdx]
-                return (
-                  <div
-                    key={f.id}
-                    className="absolute group"
-                    style={{ left: `${f.x}%`, top: `${f.y}%`, width: "120px", height: "32px" }}
-                  >
-                    <div className={cn(
-                      "w-full h-full rounded-md border-2 border-dashed flex items-center justify-center gap-1.5 text-[10px] font-medium cursor-move transition-all",
-                      f.recipientIdx === selectedRecipient ? "border-foreground bg-foreground/5" : "border-muted-foreground/40 bg-card/80"
-                    )}>
+          {/* Placed fields list */}
+          {placedFields.length > 0 && (
+            <Card className="mt-3 p-4 shadow-card">
+              <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-2">Placed fields ({placedFields.length})</div>
+              <div className="flex flex-wrap gap-2">
+                {placedFields.map((f) => {
+                  const r = recipients[f.recipientIdx]
+                  return (
+                    <div key={f.id} className="flex items-center gap-1.5 px-2 py-1 rounded-md border border-border bg-card text-xs">
                       <span className={cn("size-1.5 rounded-full", r?.color)} />
-                      {f.type === "signature" && <Icons.sign className="size-3" />}
-                      {f.type === "initials" && <Icons.edit className="size-3" />}
-                      {f.type === "date" && <Icons.calendar className="size-3" />}
-                      {f.type === "text" && <Icons.edit3 className="size-3" />}
-                      {f.type === "checkbox" && <Icons.check2 className="size-3" />}
-                      {f.type === "dropdown" && <Icons.chevronDown className="size-3" />}
-                      {f.type === "stamp" && <Icons.shield className="size-3" />}
                       <span className="capitalize">{f.type}</span>
-                      <button
-                        onClick={() => removeField(f.id)}
-                        className="opacity-0 group-hover:opacity-100 ml-1 size-4 rounded-full bg-rose-500 text-white flex items-center justify-center transition-opacity"
-                      >
-                        <Icons.x className="size-2.5" />
+                      <span className="text-muted-foreground">· {r?.name.split(" ")[0]}</span>
+                      <button onClick={() => removeField(f.id)} className="ml-1 hover:bg-accent/60 rounded p-0.5">
+                        <Icons.x className="size-3" />
                       </button>
                     </div>
-                    <div className="text-[8px] text-muted-foreground mt-0.5 truncate">{r?.name.split(" ")[0]}</div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-
-          {/* Page navigator */}
-          <div className="flex items-center justify-between mt-3">
-            <div className="text-xs text-muted-foreground">Page 1 of 12</div>
-            <div className="flex items-center gap-1">
-              <Button variant="outline" size="icon" className="size-7"><Icons.arrowLeft className="size-3.5" /></Button>
-              <Button variant="outline" size="icon" className="size-7"><Icons.arrowRight className="size-3.5" /></Button>
-            </div>
-          </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )}
         </div>
 
         {/* Right — properties */}
@@ -318,8 +298,8 @@ export function EditorView() {
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-secondary/60">
                   <span className="size-2 rounded-full bg-blue-500" />
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium truncate">Rahul Verma</div>
-                    <div className="text-[10px] text-muted-foreground truncate">rahul.verma@acme.example</div>
+                    <div className="text-xs font-medium truncate">{recipients[selectedRecipient]?.name}</div>
+                    <div className="text-[10px] text-muted-foreground truncate">{recipients[selectedRecipient]?.email}</div>
                   </div>
                 </div>
               </div>
@@ -331,10 +311,6 @@ export function EditorView() {
                   </div>
                   <span className="text-xs">Must be completed</span>
                 </div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground mb-1">Position</div>
-                <div className="text-xs font-mono">Page 1 · (70%, 72%)</div>
               </div>
             </div>
           </Card>
@@ -364,24 +340,44 @@ export function EditorView() {
               </div>
             </div>
           </Card>
-
-          <Card className="p-4 shadow-card">
-            <div className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-2.5">Audit preview</div>
-            <div className="space-y-1.5">
-              {[
-                { l: "Created", v: "Sep 28, 09:14" },
-                { l: "Edited by", v: "Priya Nair" },
-                { l: "IP hash", v: "a3f9...b2c1" },
-              ].map((x) => (
-                <div key={x.l} className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">{x.l}</span>
-                  <span className="font-medium truncate ml-2">{x.v}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
         </div>
       </div>
     </div>
+  )
+}
+
+function ToolbarButton({
+  onClick, icon, label, active, disabled, text,
+}: {
+  onClick: () => void
+  icon?: string
+  label: string
+  active?: boolean
+  disabled?: boolean
+  text?: boolean
+}) {
+  const Icon = icon ? Icons[icon] : null
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClick}
+          disabled={disabled}
+          className={cn(
+            "size-7 shrink-0",
+            active && "bg-foreground text-background hover:bg-foreground hover:text-background"
+          )}
+        >
+          {text ? (
+            <span className="text-xs font-semibold">{label.charAt(0)}</span>
+          ) : Icon ? (
+            <Icon className="size-3.5" />
+          ) : null}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="text-xs">{label}</TooltipContent>
+    </Tooltip>
   )
 }

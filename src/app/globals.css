@@ -174,3 +174,107 @@
     50% { opacity: 0.4; transform: scale(0.85); }
   }
 }
+
+/* ============================================================
+   TipTap Editor — document content styling
+   ============================================================ */
+.ProseMirror {
+  outline: none;
+  min-height: 500px;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: oklch(0.6 0.003 90);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Document content typography */
+.ProseMirror h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 1rem 0 0.5rem;
+  letter-spacing: -0.02em;
+}
+
+.ProseMirror h2 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.ProseMirror h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.5rem;
+}
+
+.ProseMirror p {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+  font-size: 0.875rem;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.ProseMirror ul { list-style: disc; }
+.ProseMirror ol { list-style: decimal; }
+.ProseMirror li { margin: 0.25rem 0; font-size: 0.875rem; }
+
+.ProseMirror blockquote {
+  border-left: 3px solid oklch(0.82 0.003 90);
+  padding-left: 1rem;
+  margin: 0.75rem 0;
+  color: oklch(0.5 0.004 90);
+  font-style: italic;
+}
+
+.ProseMirror table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.75rem 0;
+  font-size: 0.8rem;
+}
+
+.ProseMirror th,
+.ProseMirror td {
+  border: 1px solid oklch(0.82 0.003 90);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.ProseMirror th {
+  background: oklch(0.95 0.003 90);
+  font-weight: 600;
+}
+
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.375rem;
+  margin: 0.5rem 0;
+}
+
+.ProseMirror a {
+  color: oklch(0.5 0.2 250);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ProseMirror hr {
+  border: none;
+  border-top: 1px solid oklch(0.82 0.003 90);
+  margin: 1rem 0;
+}
+
+.ProseMirror strong { font-weight: 700; }
+.ProseMirror em { font-style: italic; }
+.ProseMirror s { text-decoration: line-through; }
+.ProseMirror u { text-decoration: underline; }
