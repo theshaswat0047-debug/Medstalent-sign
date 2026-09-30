@@ -4,11 +4,11 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
-import { isCustomerRole } from "@/lib/auth"
+
 
 export async function GET() {
   const session = await auth()
-  if (!session?.user || !isCustomerRole(session.user.role)) {
+  if (!session?.user || !session.user.role === "ORG") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
   }
 

@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
       password_hash: passwordHash,
       full_name: name,
       phone,
-      role: accountType === "ORG" ? "ORG_OWNER" : "PERSONAL_USER",
+      role: "ORG",
       account_type: accountType || "PERSONAL",
       org_id: orgId,
       purpose: purpose || null,

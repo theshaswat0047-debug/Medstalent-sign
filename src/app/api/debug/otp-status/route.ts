@@ -5,11 +5,11 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { getBrevoConfig, getUserByEmail } from "@/lib/supabase-server"
-import { isPlatformRole } from "@/lib/auth"
+
 
 export async function GET(req: Request) {
   const session = await auth()
-  if (!session?.user || !isPlatformRole(session.user.role)) {
+  if (!session?.user || !session.user.role === "SUPERADMIN") {
     return NextResponse.json({ error: "Unauthorized — platform staff only" }, { status: 403 })
   }
 

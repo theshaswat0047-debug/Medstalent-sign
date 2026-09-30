@@ -4,11 +4,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { supabaseAdmin } from "@/lib/supabase-server"
-import { isPlatformRole } from "@/lib/auth"
+
 
 export async function GET() {
   const session = await auth()
-  if (!session?.user || !isPlatformRole(session.user.role)) {
+  if (!session?.user || !session.user.role === "SUPERADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
   }
 
@@ -32,7 +32,7 @@ export async function GET() {
 
 export async function PATCH(req: NextRequest) {
   const session = await auth()
-  if (!session?.user || !isPlatformRole(session.user.role)) {
+  if (!session?.user || !session.user.role === "SUPERADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
   }
 

@@ -34,7 +34,7 @@ export interface AppUser {
   full_name: string
   phone: string | null
   avatar: string | null
-  role: "SUPERADMIN" | "ORG_ADMIN" | "ORG_OWNER" | "ORG_MEMBER" | "PERSONAL_USER"
+  role: "SUPERADMIN" | "ORG"
   account_type: "ORG" | "PERSONAL"
   org_id: string | null
   purpose: string | null
@@ -86,7 +86,7 @@ export async function createUser(input: {
       password_hash: input.password_hash,
       full_name: input.full_name,
       phone: input.phone ?? null,
-      role: input.role ?? "USER",
+      role: input.role ?? "ORG",
       account_type: input.account_type ?? "PERSONAL",
       org_id: input.org_id ?? null,
       purpose: input.purpose ?? null,
