@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { supabase, type Organization } from "@/lib/supabase-client"
 import { isWorkEmail, getEmailDomain } from "@/lib/use-session"
+import { SupabaseConfigWarning } from "@/components/vaultsign/supabase-config-warning"
 
 type AccountType = "ORG" | "PERSONAL"
 
@@ -230,6 +231,8 @@ export default function SignupPage() {
               )
             })}
           </div>
+
+          <SupabaseConfigWarning />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Shared: Name */}

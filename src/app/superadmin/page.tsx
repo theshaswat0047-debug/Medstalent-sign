@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase-client"
+import { SupabaseConfigWarning } from "@/components/vaultsign/supabase-config-warning"
 
 type Step = "email" | "otp"
 
@@ -122,6 +123,8 @@ export default function SuperAdminPage() {
                   No password needed. We'll send a 6-digit code to your email.
                 </p>
               </div>
+
+              <SupabaseConfigWarning />
 
               <form onSubmit={handleSendOtp} className="space-y-4">
                 <div>

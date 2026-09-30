@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase-client"
+import { SupabaseConfigWarning } from "@/components/vaultsign/supabase-config-warning"
 
 export default function OrganizationAdminPage() {
   const router = useRouter()
@@ -86,6 +87,8 @@ export default function OrganizationAdminPage() {
             <h2 className="text-xl font-semibold tracking-tight">Sign in</h2>
             <p className="text-sm text-muted-foreground mt-1">Enter your HQ credentials.</p>
           </div>
+
+          <SupabaseConfigWarning />
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
