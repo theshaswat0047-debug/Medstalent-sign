@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/hooks/use-toast"
 import { supabase } from "@/lib/supabase-client"
 
-export default function LoginPage() {
+export default function OrganizationAdminPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [email, setEmail] = useState("")
@@ -19,7 +19,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
 
-  // If already logged in, redirect to app
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) router.replace("/")
@@ -32,7 +31,6 @@ export default function LoginPage() {
     setLoading(true)
 
     const { error } = await supabase.auth.signInWithPassword({ email, password })
-
     setLoading(false)
 
     if (error) {
@@ -40,7 +38,7 @@ export default function LoginPage() {
       return
     }
 
-    toast({ title: "Welcome back!", description: "You're signed in." })
+    toast({ title: "Welcome back", description: "Organization Admin signed in" })
     router.replace("/")
   }
 
@@ -54,15 +52,20 @@ export default function LoginPage() {
           <BrandMark size="lg" showTagline />
         </div>
         <div className="relative space-y-6 max-w-md">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-foreground text-background text-xs font-medium">
+            <Icons.building className="size-3.5" />
+            HQ Organization Admin
+          </div>
           <h1 className="text-3xl font-bold tracking-tight leading-tight">
-            Welcome back to
+            Manage the platform,
             <br />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#3B82F6] via-[#6366F1] to-[#A855F7]">
-              VaultSign
+              with assigned duties.
             </span>
           </h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Sign in to continue sending, signing, and tracking your documents.
+            Sign in with your VaultSign HQ credentials. Your duties — approvals, verifications,
+            credits — are assigned by the SuperAdmin.
           </p>
         </div>
         <div className="relative text-[11px] text-muted-foreground">© 2026 VaultSign, Inc. · Secure. Sign. Done.</div>
@@ -77,8 +80,11 @@ export default function LoginPage() {
           </div>
 
           <div className="mb-6">
+            <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-secondary text-[10px] font-medium mb-3">
+              <Icons.building className="size-3" /> HQ ORGANIZATION ADMIN
+            </div>
             <h2 className="text-xl font-semibold tracking-tight">Sign in</h2>
-            <p className="text-sm text-muted-foreground mt-1">Enter your credentials to continue.</p>
+            <p className="text-sm text-muted-foreground mt-1">Enter your HQ credentials.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -89,7 +95,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
+                placeholder="you@vaultsign.io"
                 className="mt-1.5 h-10"
                 required
                 autoFocus
@@ -122,20 +128,19 @@ export default function LoginPage() {
           </form>
 
           <div className="mt-6 pt-6 border-t border-border text-center">
-            <span className="text-xs text-muted-foreground">Don't have an account? </span>
+            <span className="text-xs text-muted-foreground">Not an HQ admin? </span>
             <button onClick={() => router.push("/signup")} className="text-xs font-medium text-foreground hover:underline">
               Sign up
             </button>
           </div>
 
-          {/* Platform logins */}
           <div className="mt-4 flex items-center justify-center gap-4 text-[11px] text-muted-foreground">
             <button onClick={() => router.push("/superadmin")} className="hover:text-foreground flex items-center gap-1">
               <Icons.shield className="size-3" /> SuperAdmin
             </button>
             <span>·</span>
-            <button onClick={() => router.push("/organizationadmin")} className="hover:text-foreground flex items-center gap-1">
-              <Icons.building className="size-3" /> Org Admin (HQ)
+            <button onClick={() => router.push("/login")} className="hover:text-foreground flex items-center gap-1">
+              <Icons.user className="size-3" /> Customer login
             </button>
           </div>
         </div>

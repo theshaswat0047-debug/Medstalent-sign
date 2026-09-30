@@ -7,7 +7,8 @@ import { Icons } from "./icons"
 import { BrandMark } from "./brand-mark"
 import { SendDocumentModal } from "./send-modal"
 import { useAppStore } from "@/lib/store"
-import { useAuthStore, type Role, type SessionUser } from "@/lib/auth-store"
+import { useSession } from "@/lib/use-session"
+import { supabase } from "@/lib/supabase-client"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -85,24 +86,24 @@ function defaultViewForRole(role: Role): ViewKey {
 
 export function AppShell() {
   const router = useRouter()
-  const authUser = useAuthStore((s) => s.user)
-  const logout = useAuthStore((s) => s.logout)
+  const { profile, org } = useSession()
 
-  // Role is now driven by the authenticated session, not local state
-  const role: Role = authUser?.role ?? "USER"
+  // Role comes from the Supabase profiles table
+  const role: Role = profile?.role ?? "USER"
   const [view, setView] = useState<ViewKey>(defaultViewForRole(role))
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const openSendModal = useAppStore((s) => s.openSendModal)
 
-  // Build the profile from the auth session, falling back to ROLE_PROFILES
-  const profile: SessionUser = authUser ?? {
-    id: "anon",
-    email: "",
-    name: "Anonymous",
-    avatar: "??",
-    role,
-    orgLabel: ROLE_PROFILES[role]?.orgLabel ?? "",
-    scope: ROLE_PROFILES[role]?.scope ?? "",
+  // Derive display profile from Supabase session
+  const profileDisplay = {
+    avatar: profile?.avatar ?? "??",
+    name: profile?.full_name ?? "User",
+    email: profile?.email ?? "",
+    orgLabel: org?.name ?? (profile?.account_type === "PERSONAL" ? "Personal account" : "—"),
+    scope: role === "SUPERADMIN" ? "Platform-wide access"
+      : role === "ORG_ADMIN" ? "Organization admin"
+      : role === "MANAGER" ? "Team manager"
+      : "Standard user",
   }
 
   const visibleNav = navForRole(role)
@@ -110,8 +111,8 @@ export function AppShell() {
   // If the current view isn't available to the current role, fall back.
   const effectiveView: ViewKey = visibleNav.some((n) => n.key === view) ? view : defaultViewForRole(role)
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
     router.replace("/login")
   }
 
@@ -237,12 +238,12 @@ export function AppShell() {
                 <button className="flex items-center gap-2 h-9 pl-1.5 pr-2 rounded-lg hover:bg-accent/60 transition-colors">
                   <Avatar className="size-6.5 rounded-md">
                     <AvatarFallback className="rounded-md bg-foreground text-background text-[11px] font-semibold">
-                      {profile.avatar}
+                      {profileDisplay.avatar}
                     </AvatarFallback>
                   </Avatar>
                   <div className="hidden lg:block text-left">
-                    <div className="text-xs font-medium leading-none">{profile.name}</div>
-                    <div className="text-[10px] text-muted-foreground mt-0.5 leading-none">{profile.orgLabel}</div>
+                    <div className="text-xs font-medium leading-none">{profileDisplay.name}</div>
+                    <div className="text-[10px] text-muted-foreground mt-0.5 leading-none">{profileDisplay.orgLabel}</div>
                   </div>
                   <Icons.chevronDown className="size-3.5 text-muted-foreground hidden lg:block" />
                 </button>
@@ -252,19 +253,19 @@ export function AppShell() {
                 <div className="px-3 py-3 border-b border-border">
                   <div className="flex items-center gap-2.5">
                     <Avatar className="size-9 rounded-md">
-                      <AvatarFallback className="rounded-md bg-foreground text-background text-[11px] font-semibold">{profile.avatar}</AvatarFallback>
+                      <AvatarFallback className="rounded-md bg-foreground text-background text-[11px] font-semibold">{profileDisplay.avatar}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{profile.name}</div>
-                      <div className="text-[11px] text-muted-foreground truncate">{profile.email}</div>
+                      <div className="text-sm font-medium truncate">{profileDisplay.name}</div>
+                      <div className="text-[11px] text-muted-foreground truncate">{profileDisplay.email}</div>
                     </div>
                   </div>
                   <div className="mt-2.5 flex items-center gap-1.5">
                     <Badge variant="outline" className="h-5 text-[10px] gap-1">
                       <Icons.shield className="size-2.5" />
-                      {profile.role.replace("_", " ")}
+                      {role.replace("_", " ")}
                     </Badge>
-                    <span className="text-[10px] text-muted-foreground">{profile.scope}</span>
+                    <span className="text-[10px] text-muted-foreground">{profileDisplay.scope}</span>
                   </div>
                 </div>
                 <DropdownMenuItem className="cursor-pointer text-xs h-9" onSelect={(e) => e.preventDefault()}>
@@ -287,7 +288,7 @@ export function AppShell() {
       <div className="flex flex-1 min-h-0">
         {/* Sidebar — desktop */}
         <aside className="hidden lg:flex w-60 shrink-0 flex-col border-r border-border bg-card">
-          <SidebarContent role={role} view={effectiveView} setView={handleSetView} profile={profile} openSendModal={openSendModal} />
+          <SidebarContent role={role} view={effectiveView} setView={handleSetView} profile={profileDisplay} openSendModal={openSendModal} />
         </aside>
 
         {/* Sidebar — mobile drawer */}
@@ -310,7 +311,7 @@ export function AppShell() {
                   <Icons.x className="size-4" />
                 </Button>
               </div>
-              <SidebarContent role={role} view={effectiveView} setView={(v) => { handleSetView(v); setSidebarOpen(false) }} profile={profile} mobile openSendModal={openSendModal} />
+              <SidebarContent role={role} view={effectiveView} setView={(v) => { handleSetView(v); setSidebarOpen(false) }} profile={profileDisplay} mobile openSendModal={openSendModal} />
             </aside>
           </div>
         )}
@@ -335,7 +336,7 @@ function SidebarContent({
   role: Role
   view: ViewKey
   setView: (v: ViewKey) => void
-  profile: { name: string; avatar: string; orgLabel: string; scope: string }
+  profile: { name: string; avatar: string; orgLabel: string; scope: string } | undefined
   mobile?: boolean
   openSendModal: () => void
 }) {
@@ -442,11 +443,11 @@ function SidebarContent({
 
         <div className="flex items-center gap-2 px-1 pt-1">
           <Avatar className="size-8 rounded-md">
-            <AvatarFallback className="rounded-md bg-foreground text-background text-xs font-semibold">{profile.avatar}</AvatarFallback>
+            <AvatarFallback className="rounded-md bg-foreground text-background text-xs font-semibold">{profileDisplay.avatar}</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium truncate">{profile.name}</div>
-            <div className="text-[10px] text-muted-foreground truncate">{profile.orgLabel}</div>
+            <div className="text-xs font-medium truncate">{profileDisplay.name}</div>
+            <div className="text-[10px] text-muted-foreground truncate">{profileDisplay.orgLabel}</div>
           </div>
           <Button size="icon" variant="ghost" className="size-7">
             <Icons.settings className="size-3.5" />
